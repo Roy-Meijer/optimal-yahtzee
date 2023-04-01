@@ -1,5 +1,3 @@
-
-
 #pragma GCC optimize("Ofast")
 #pragma GCC optimize("unroll-loops")
 #pragma GCC target("sse,sse2,sse3,ssse3,sse4,popcnt,abm,mmx,avx")
@@ -338,12 +336,22 @@ void calcExpectedValue() {
 		}
 	}
 
+	int scoreForUpperSection[6] = {-1, -1, -1, -1, -1, -1};
+
+	//loop from 0 to 252 (every roll combination)
+	for (int i = 0; i < 6; i++) {
+		scoreForUpperSection[i] = -1;
+	}
+	bool bonusDone = false;
+
 	//fill all categories in every order with evert possible roll
 	for(int subsetFilled = 1; subsetFilled < (1<<13); ++subsetFilled) {
 		vector<double> sumOfDpValsForSubsetKept(28,0.0);
+
 		//roll 1, 2, or 3 times
 		for(int numberRerolls = 0; numberRerolls <= 2; ++numberRerolls) {
 			vector<double> newSumOfDpVals(28, 0.0);
+
 			//loop from 0 to 252 (every roll combination)
 			for(int roll = 0; roll < (int)allRollsIndistinguishable.size(); ++roll) {
 				//take a pointer to maxEV
@@ -357,8 +365,42 @@ void calcExpectedValue() {
 					//if score slot (category) is not empty
 					if(subsetFilled & (1<<scoreVal)) {
 						//add average expected value to current score
-						const double nextScore = scoreForRoll[roll][scoreVal] + averageMaxEV[subsetFilled ^ (1<<scoreVal)];
+						double nextScore = scoreForRoll[roll][scoreVal] + averageMaxEV[subsetFilled ^ (1<<scoreVal)];
 						currTransitions.push_back({-1, scoreVal, nextScore});
+
+						
+							if (scoreVal < 6) {
+								//add to the array
+								//std::cout << "scoreVal: " << scoreVal << '\n';
+								scoreForUpperSection[scoreVal] = scoreForRoll[roll][scoreVal];
+								bool allUpperFilledIn = true;
+
+								int sumUpper = 0;
+								//check if all upper section scores are filled in
+								for (int i = 0; i < 6; i++) {
+									//std::cout << "i: " << i << '\n';
+									if (scoreForUpperSection[i] == -1) {
+										//if not, stop
+										allUpperFilledIn = false;
+										break;
+									}
+									//if they are, add them to the sum
+									sumUpper += scoreForUpperSection[i];
+								}
+
+								//if they are filled in and the bonus has not been added / wasted yet
+								if (allUpperFilledIn == true && bonusDone == false) {
+									bonusDone = true;
+									//if the sum is at leat 63
+									if (sumUpper >= 63) {
+										std::cout << "Bonus added!\n";
+										//add the bonus
+										nextScore += 35.0;
+									}
+								}
+							}
+						
+
 						currDp = max(currDp, nextScore);
 					}
 				}
