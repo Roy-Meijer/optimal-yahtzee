@@ -69,9 +69,6 @@ struct reroll_node
     struct root_scorecard_node* option_twos;
 };
 
-// Function to create a new node:
-
-
 
 void init ()
 {
