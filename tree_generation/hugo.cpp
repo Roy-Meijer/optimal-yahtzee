@@ -7,9 +7,7 @@
 #define NR_OF_SCORE_SECTIONS 2
 #define NR_OF_ROUNDS 2 //should be equal to NR_OF_SCORE_SECTIONS, but made separate for testing purposes.
 
-int global_ID_incrementer = {};
-
-// forward declarations of structs (needed when using an array of pointers)
+// forward declarations of structs (needed when using an array of pointers in the structs)
 struct DiceNode;
 struct RerollChoiceNode;
 struct DiceRerollOptionsNode;
@@ -60,15 +58,12 @@ struct DiceRerollOptionsNode
     RootNode* root_nodes[2];
 };
 
-void generateTree(RootNode* root, int depth) {
+void generateTree(RootNode* root, int depth) 
+{
     // If we've reached the desired depth, stop generating new nodes.
     if (depth == 0) {
         return;
     }
-
-    // set ID:
-    root->ID = global_ID_incrementer;
-    ++global_ID_incrementer;
 
     // For each of the four ways to throw two two-sided dice...
     for (int i = 0; i < 4; i++) {
@@ -80,9 +75,6 @@ void generateTree(RootNode* root, int depth) {
             // Create a new DiceNode object and store its pointer in the dice_nodes array.
             DiceNode* dice_node = new DiceNode();
             dice_nodes[j] = dice_node;
-            // set ID:
-            //dice_node->ID = global_ID_incrementer;
-            //++global_ID_incrementer;
 
             // For each RerollChoiceNode...
             for (int k = 0; k < 4; k++) {
@@ -118,6 +110,69 @@ void generateTree(RootNode* root, int depth) {
     }
 }
 
+int generateIDs(RootNode* root)
+{
+    // This only works for one round (i.e. its not recursive I guess)
+    // It does work for one round of the tree as it returns 164 nodes, and my by-hand-calculations give 165)
+
+    // Variable to give each node a unique ID, to count how many there are
+    int node_ID = 0;
+
+    // for all 4 root children:
+    for (int i = 0; i < 4; i++) {
+        root->dice_nodes[i]->ID = ++node_ID;
+        // for all 4 of their children:
+        for (int j = 0; j < 4; j++) {
+            root->dice_nodes[i]->reroll_choices_nodes[j]->ID = ++node_ID;
+            // for their 3 children:
+            for (int k = 0; k <= 2; k++) {
+                root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->ID = ++node_ID;
+                // for their two children:
+                for (int l = 0; l < 2; l++) {
+                    root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->root_nodes[l]->ID = ++node_ID;
+                }
+            }
+        }
+    }
+    return node_ID;
+}
+
+void printTree(RootNode* root) 
+{
+    // Print the root node.
+    std::cout << "Root node: " << root << std::endl;
+
+    // Print the four dice nodes.
+    for (int i = 0; i < 4; i++) {
+        std::cout << "    Dice node " << i << ": " << root->dice_nodes[i]->ID << std::endl;
+
+        // Print the four reroll choice nodes for each dice node.
+        for (int j = 0; j < 4; j++) {
+            std::cout << "        Reroll choice node " << j << " of dice node " << i << ": "
+                      << root->dice_nodes[i]->reroll_choices_nodes[j]->ID << std::endl;
+
+            // Print the up to three child nodes for each reroll choice node.
+            for (int k = 0; k <= 2; k++) {
+                std::cout << "            Dice reroll options node " << k << " of reroll choice node " << j
+                          << " of dice node " << i << ": "
+                          << root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->ID << std::endl;
+
+                // Print the root nodes for each child node.
+                if (root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k] != nullptr) {
+                    std::cout << "                Child nodes of dice reroll options node " << k
+                              << " of reroll choice node " << j << " of dice node " << i << ": " << std::endl;
+                    for (int l = 0; l < 2; l++) {
+                        std::cout << "                    Root node " << l << " of child node " << k
+                                  << " of dice reroll options node " << k << " of reroll choice node " << j
+                                  << " of dice node " << i << ": "
+                                  << root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->root_nodes[l]->ID << std::endl;
+                    }
+                }
+            }
+        }
+    }
+}
+
 int main ( )
 {  
     // Create a new RootNode object.
@@ -126,9 +181,14 @@ int main ( )
     // Generate the tree for the root node.
     generateTree(root, 2);
 
-    // print the tree (for now just look in debugger)
+    // set ID for all nodes:
+    int treeSize = {};
+    treeSize = generateIDs(root);
+    std::cout << "There are " << treeSize << " nodes in the tree.\n";
+
+    // print the tree (or just look in debugger)
+    printTree(root);
 
     // clean up the memory of the tree:
-
     return 0;
 }
