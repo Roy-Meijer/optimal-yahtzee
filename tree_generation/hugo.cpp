@@ -91,7 +91,7 @@ void generateTree(RootNode* root, int depth)
                     dice_node->reroll_choices_nodes[k]->dice_reroll_options_nodes[l] = diceReroll_options_node;
 
                     // For each child of the DiceRerollOptionsNode...
-                    for (int m = 0; m <= 2; m++) {
+                    for (int m = 0; m < 2; m++) {
                         // Create a new RootNode object and add it to the current DiceRerollOptionsNode's
                         // root_nodes array.
                         RootNode* child_node = new RootNode();
@@ -112,7 +112,7 @@ void generateTree(RootNode* root, int depth)
 
 int generateIDs(RootNode* root)
 {
-    // This only works for one round (i.e. its not recursive I guess)
+    // This is not yet working. It should be recursive, it is not.
     // It does work for one round of the tree as it returns 164 nodes, and my by-hand-calculations give 165)
 
     // Variable to give each node a unique ID, to count how many there are
@@ -125,11 +125,12 @@ int generateIDs(RootNode* root)
         for (int j = 0; j < 4; j++) {
             root->dice_nodes[i]->reroll_choices_nodes[j]->ID = ++node_ID;
             // for their 3 children:
-            for (int k = 0; k <= 2; k++) {
+            for (int k = 0; k < 3; k++) {
                 root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->ID = ++node_ID;
                 // for their two children:
                 for (int l = 0; l < 2; l++) {
                     root->dice_nodes[i]->reroll_choices_nodes[j]->dice_reroll_options_nodes[k]->root_nodes[l]->ID = ++node_ID;
+                    // should enter the function again recursively here.
                 }
             }
         }
