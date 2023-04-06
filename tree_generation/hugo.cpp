@@ -5,179 +5,130 @@
 #define NR_OF_SIDES 2
 #define NR_OF_REROLLS 1
 #define NR_OF_SCORE_SECTIONS 2
-
 #define NR_OF_ROUNDS 2 //should be equal to NR_OF_SCORE_SECTIONS, but made separate for testing purposes.
 
-// This is the final scorecard.
-int scorecard[NR_OF_SCORE_SECTIONS] = {};
+int global_ID_incrementer = {};
 
-// This is the set of thrown dice
-int diceThrow[NR_OF_DICE] = {};
+// forward declarations of structs (needed when using an array of pointers)
+struct DiceNode;
+struct RerollChoiceNode;
+struct DiceRerollOptionsNode;
 
-
-struct root_scorecard_node
+struct RootNode
 {
     // id of node
     int ID = {};
     // should contain ES
 
     // scorecard:
-    int scorecard[NR_OF_SCORE_SECTIONS] = {};
+    //int scorecard[NR_OF_SCORE_SECTIONS] = {};
     // 4 dice_node children
-    struct dice_node* child1_1;
-    struct dice_node* child1_2;
-    struct dice_node* child2_1;
-    struct dice_node* child2_2;
+    DiceNode* dice_nodes[4];
 };
 
-struct dice_node
+struct DiceNode
 {
     // id of node
     int ID = {};
     // the specific dice roll (array of values)
-    int diceRoll[NR_OF_DICE] = {};
+    //int diceRoll[NR_OF_DICE] = {};
     // the probability of getting this dice roll (for naive implementation all probabilities are the same since we don't cluster)
     //double probability = {};
     // 4 choice_node children
-    struct choice_node* zero_rerolls;
-    struct choice_node* one_rerolls;
-    struct choice_node* other_reroll;
-    struct choice_node* both_reroll;
+    RerollChoiceNode* reroll_choices_nodes[4];
 };
 
-struct choice_node
+struct RerollChoiceNode
 {
     // id of node
     int ID = {};
     // (should contain ES)
-    // contains 1, 2, or 3 reroll_node children
-    struct reroll_node* child1;         // always used, sometimes as passthrough for no_reroll parent
-    struct reroll_node* child2;         // used if a dice is rerolled, or both 
-    struct reroll_node* child3;         // only used if both dice are rerolled
+    //
+    // contains 1, 2 or 3 DiceRerollChoiceNode children
+    DiceRerollOptionsNode* dice_reroll_options_nodes[3];
 };
 
-struct reroll_node
+struct DiceRerollOptionsNode
 {
     // id of node
     int ID = {};
     // the specific dice roll (array of values)
-    int diceRoll[NR_OF_DICE] = {};
+    // int diceRoll[NR_OF_DICE] = {};
     // (the probability)
-    //double probability = {};
-    // 2 root_scorecard_node children
-    struct root_scorecard_node* option_ones;
-    struct root_scorecard_node* option_twos;
+    //
+    // 2 root node children (ones or twos)
+    RootNode* root_nodes[2];
 };
 
+void generateTree(RootNode* root, int depth) {
+    // If we've reached the desired depth, stop generating new nodes.
+    if (depth == 0) {
+        return;
+    }
 
-void init ()
-{
-    // Init the scorecard, no score filled in is -1.
-    for (int scoreSection = 0; scoreSection < NR_OF_SCORE_SECTIONS; scoreSection++) 
-    {
-        scorecard[scoreSection] = -1;
+    // set ID:
+    root->ID = global_ID_incrementer;
+    ++global_ID_incrementer;
+
+    // For each of the four ways to throw two two-sided dice...
+    for (int i = 0; i < 4; i++) {
+        // Create an array of four pointers to DiceNode objects.
+        DiceNode* dice_nodes[4];
+
+        // For each DiceNode...
+        for (int j = 0; j < 4; j++) {
+            // Create a new DiceNode object and store its pointer in the dice_nodes array.
+            DiceNode* dice_node = new DiceNode();
+            dice_nodes[j] = dice_node;
+            // set ID:
+            //dice_node->ID = global_ID_incrementer;
+            //++global_ID_incrementer;
+
+            // For each RerollChoiceNode...
+            for (int k = 0; k < 4; k++) {
+                // Create a new RerollChoiceNode object and add it to the current DiceNode's
+                // reroll_choices array.
+                RerollChoiceNode* reroll_choice_node = new RerollChoiceNode();
+                dice_node->reroll_choices_nodes[k] = reroll_choice_node;
+
+                // For each DiceRerollOptionsNode...
+                for (int l = 0; l < 4; l++){
+                    // Create a new DiceRerollOptionsNode object and add it to the current RerollChoiceNode's
+                    // dice_reroll_options_nodes array.
+                    DiceRerollOptionsNode* diceReroll_options_node = new DiceRerollOptionsNode();
+                    dice_node->reroll_choices_nodes[k]->dice_reroll_options_nodes[l] = diceReroll_options_node;
+
+                    // For each child of the DiceRerollOptionsNode...
+                    for (int m = 0; m <= 2; m++) {
+                        // Create a new RootNode object and add it to the current DiceRerollOptionsNode's
+                        // root_nodes array.
+                        RootNode* child_node = new RootNode();
+                        diceReroll_options_node->root_nodes[m] = child_node;
+
+                        // Recursively generate the tree for the child node.
+                        generateTree(child_node, depth - 1);
+                    }
+                }
+                
+            }
+
+            // Add the current DiceNode to the root node's dice_nodes array.
+            root->dice_nodes[j] = dice_node;
+        }
     }
-    // Init the dice, dice not thrown is -1. (not really needed I guess)
-    for (int dice = 0; dice < NR_OF_DICE; dice++) 
-    {
-        diceThrow[dice] = -1;
-    }
-    
 }
-
-/*void throwDice () 
-{
-    // UPDATE THIS: only rethrow the dice that need to be rethrown
-    // currently, it rethrows all the dice
-
-    // set the random seed
-    srand((unsigned int)time(NULL));
-    // for all dice, 
-    for (int dice = 0; dice < NR_OF_DICE; dice++)
-    {
-        diceThrow[dice] =  rand() % NR_OF_SIDES + 1;
-    }
-    
-}*/
-
-void printScorecard () 
-{
-    std::cout << "-------\n";
-    for (int score_section = 0; score_section < NR_OF_SCORE_SECTIONS; score_section++)
-    {
-        std::cout << score_section + 1 << "'s: " << scorecard[score_section] << '\n';
-    }
-    std::cout << "-------\n";    
-}
-
-
 
 int main ( )
 {  
+    // Create a new RootNode object.
+    RootNode* root = new RootNode();
 
-    /*
-    // Init variables 
-    init();
+    // Generate the tree for the root node.
+    generateTree(root, 2);
 
-    // Play the game! There are NR_OF_SCORE_SECTIONS rounds, and in each round one part of the scorecard is filled
-    for (int round = 0; round < NR_OF_ROUNDS; round++)
-    {
-        // - First dice roll of the round -
-        //throwDice();
+    // print the tree (for now just look in debugger)
 
-
-        // - Calculate expected score for all possible reroll combinations (reroll 0 dice, reroll first dice, reroll second dice, reroll both dice)
-
-        // - Pick the choice with the highest ES 
-        
-        // - Update the scorecard - 
-
-        // - Print the current scorecard -
-        std::cout << "The scorecard for round " << round + 1 << " is: \n"; 
-        printScorecard();
-
-        // - End round -
-    }
-    
-    
-
-    //print final score sum
-    int scoreSum = {};
-    for (int score_section = 0; score_section < NR_OF_SCORE_SECTIONS; score_section++)
-    {
-        scoreSum += scorecard[score_section];
-    }
-    
-    std::cout << "Final score is " << scoreSum << ".\n";
-    */
-
-   std::cout << "hello, world\n";
-
-    // declare and allocate new root node
-    struct root_scorecard_node* root = new struct root_scorecard_node();
-    // assign ID
-    root->ID = 1;
-
-    // declare and allocate new dice node child
-    struct dice_node* child1_1_pointer = new struct dice_node();
-    // point in right direction
-    root->child1_1 = child1_1_pointer;
-    // change the ID    
-    root->child1_1->ID = 2;
-
-    // declare and allocate new choice node child
-    struct choice_node* child1_1_choice_node_pointer = new struct choice_node();
-    // point in right direction
-    root->child1_1->zero_rerolls = child1_1_choice_node_pointer;
-    // change the ID    
-    root->child1_1->zero_rerolls->ID = 6;
-
-    // declare and allocate new reroll node child
-    struct reroll_node* child1_1_choice_node_reroll_node_pointer = new struct reroll_node();
-    // point in right direction
-    root->child1_1->zero_rerolls->child1 = child1_1_choice_node_reroll_node_pointer;
-    // change the ID    
-    root->child1_1->zero_rerolls->child1->ID = 100;
+    // clean up the memory of the tree:
 
     return 0;
 }
