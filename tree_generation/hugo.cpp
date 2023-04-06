@@ -19,7 +19,7 @@ struct RootNode
     // id of node
     int ID = {};
     // should contain ES
-
+    //
     // scorecard:
     //int scorecard[NR_OF_SCORE_SECTIONS] = {};
     // 4 dice_node children
@@ -31,9 +31,9 @@ struct DiceNode
     // id of node
     int ID = {};
     // the specific dice roll (array of values)
-    //int diceRoll[NR_OF_DICE] = {};
+    // 
     // the probability of getting this dice roll (for naive implementation all probabilities are the same since we don't cluster)
-    //double probability = {};
+    // 
     // 4 choice_node children
     RerollChoiceNode* reroll_choices_nodes[4];
 };
@@ -53,8 +53,8 @@ struct DiceRerollOptionsNode
     // id of node
     int ID = {};
     // the specific dice roll (array of values)
-    // int diceRoll[NR_OF_DICE] = {};
-    // (the probability)
+    // 
+    // the probability of getting this dice roll (for naive implementation all probabilities are the same since we don't cluster)
     //
     // 2 root node children (ones or twos)
     RootNode* root_nodes[2];
@@ -92,7 +92,7 @@ void generateTree(RootNode* root, int depth) {
                 dice_node->reroll_choices_nodes[k] = reroll_choice_node;
 
                 // For each DiceRerollOptionsNode...
-                for (int l = 0; l < 4; l++){
+                for (int l = 0; l < 3; l++){
                     // Create a new DiceRerollOptionsNode object and add it to the current RerollChoiceNode's
                     // dice_reroll_options_nodes array.
                     DiceRerollOptionsNode* diceReroll_options_node = new DiceRerollOptionsNode();
