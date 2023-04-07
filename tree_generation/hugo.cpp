@@ -115,6 +115,8 @@ int generateIDs(RootNode* root)
     // This is not yet working. It should be recursive, it is not.
     // It does work for one round of the tree as it returns 164 nodes, and my by-hand-calculations give 165)
 
+    // Also, it generates the IDs depth-first, but we probably want breadth-first.
+
     // Variable to give each node a unique ID, to count how many there are
     int node_ID = 0;
 
@@ -140,6 +142,7 @@ int generateIDs(RootNode* root)
 
 void printTree(RootNode* root) 
 {
+    // This function also only prints the top tree (1 round)
     // Print the root node.
     std::cout << "Root node: " << root << std::endl;
 
