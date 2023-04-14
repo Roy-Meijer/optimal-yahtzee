@@ -7,7 +7,8 @@
 int nodeCount {};
 
 //#define NAIVE 1            // Upper bound for amount of nodes
-#define DICE_ROLLS_EQUAL 1 // rolling 1 and 2 is the same as rolling 2 and 1
+#define DICE_ROLLS_EQUAL 1 // Rolling 1 and 2 is the same as rolling 2 and 1
+#define REROLL_SAME 1      // Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
 
 class Node {
 public:
@@ -20,6 +21,11 @@ public:
 
     // not yet implemented
     double maxExpectedScore;
+
+    // The two possible dice rolls. Make it public to not have to deal with getters and setters
+    // Two ints instead of array so I don't have to deal with array pointers and stuff
+    int diceOne = {-1};
+    int diceTwo = {-1};
 
     // constructor
     Node(NodeType type, Node* parent = nullptr) : type(type), parent(parent), maxExpectedScore(-1.0) {}
@@ -62,10 +68,12 @@ public:
         return children;
     }
 
+    //made public so that I can acces it more easily lol
+    std::vector<Node*> children;
 private:
     NodeType type;
     Node* parent;
-    std::vector<Node*> children;
+    //std::vector<Node*> children;
 };
 
 void generateNodeTree(Node* node, int depth) {
@@ -74,7 +82,7 @@ void generateNodeTree(Node* node, int depth) {
     }
 
     Node::NodeType childType;
-    int numChildren;
+    int numChildren = {};
     if (node->getType() == Node::ROOT_NODE) {
         childType = Node::DICE_NODE;
         #ifdef NAIVE
@@ -90,6 +98,13 @@ void generateNodeTree(Node* node, int depth) {
         childType = Node::REROLL_CHOICE_NODE;
         // There are four children. Don't reroll, reroll dice 1, reroll dice 2, or rerolling both dice.
         numChildren = 4;
+        // When first roll is 1,1 or 2,2 then rerolling dice 1 and dice 2 is the same. Gives three children!
+        #ifdef REROLL_SAME
+        if( (node->diceOne == 1 && node->diceTwo == 1) || (node->diceOne == 2 && node->diceTwo == 2))
+        {
+            numChildren = 3;
+        }
+        #endif
     } else if (node->getType() == Node::REROLL_CHOICE_NODE) {
         childType = Node::DICE_REROLL_OPTIONS_NODE;
         #ifdef NAIVE
@@ -129,9 +144,40 @@ void generateNodeTree(Node* node, int depth) {
     for (int i = 0; i < numChildren; ++i) {
         Node* child = new Node(childType);
         node->addChild(child);
+
+        
+        // Adding dice rolls to the DICE_NODEs.
+        #ifdef REROLL_SAME
+        // if the current node is a ROOT_NODE, the children are DICE_NODE, and should contain the dice rolls.
+        if(node->getType() == Node::NodeType::ROOT_NODE)
+        {
+            if(i == 0)
+            {
+                // this is why I made the children public. I tried doing node->getChild()->diceOne but it didn't work.
+                // other fixes might be to make this generateNodeTree function a friend of the Node class (so it can access private members)
+                // ??
+                // This works in any case.
+                node->children[i]->diceOne = 1;
+                node->children[i]->diceTwo = 1;
+            }
+            if(i == 1) // this is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
+            {
+                node->children[i]->diceOne = 1;
+                node->children[i]->diceTwo = 2;
+            }
+            if(i == 2)
+            {
+                node->children[i]->diceOne = 2;
+                node->children[i]->diceTwo = 2;
+            }           
+
+        }
+        #endif
+
         // Here we count how many nodes there are
         ++nodeCount;
-        generateNodeTree(child, depth - 1); // recursively make children
+        // recursively make children
+        generateNodeTree(child, depth - 1); 
     }
 }
 
@@ -226,7 +272,17 @@ int main() {
     #endif
 
     #ifdef DICE_ROLLS_EQUAL
-    std::cout << "(1,2) = (2,1)...\n";
+    std::cout << "Using optimization (1,2) = (2,1)...\n";
+    #endif
+
+    #ifdef NAIVE
+    #ifdef DICE_ROLLS_EQUAL
+    std::cout << "ERROR! These shouldn't be on at the same time.\n";
+    #endif
+    #endif
+
+    #ifdef REROLL_SAME
+    std::cout << "Using otimization reroll d1 = reroll d2 (when the parent dice is 1,1 or 2,2)...\n";
     #endif
 
     //make 1 root node
@@ -246,7 +302,7 @@ int main() {
     std::string outputFiletype = "svg"; //you can also change to png
     outputFilename += "." + outputFiletype;
 
-    int maxSiblings = 1; //increasing this number shows more nodes which are on the same layer and makes the tree less readable. it also takes more time to generate tree
+    int maxSiblings = 4; //increasing this number shows more nodes which are on the same layer and makes the tree less readable. it also takes more time to generate tree
     printTreeAsGraph(rootNodes, outputFilename, outputFiletype, maxSiblings); //generate tree figure
 
     //delete tree
