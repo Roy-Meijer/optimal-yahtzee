@@ -89,7 +89,7 @@ void generateNodeTree(Node* node, int depth) {
         // vice versa for the other dice
         // If no dice are rerolled in the parent, it depends on how we implement it. I guess 1 child makes most sense
         // x,y where the values x and y are just the same values of the dice that were in the first round (remember, no rerolls here)
-        numChildren = 3;
+        numChildren = 4;
     } else if (node->getType() == Node::DICE_REROLL_OPTIONS_NODE) {
         childType = Node::ROOT_NODE;
         if (depth > 1) {
@@ -200,6 +200,7 @@ int main() {
 
     //make 1 root node
     std::vector<Node*> rootNodes(1);
+    ++nodeCount;
 
     //generate tree of depth 8
     for (auto& rootNode : rootNodes) {
