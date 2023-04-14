@@ -7,8 +7,8 @@
 int nodeCount {};
 
 //#define NAIVE 1            // Upper bound for amount of nodes
-#define DICE_ROLLS_EQUAL 1 // Rolling 1 and 2 is the same as rolling 2 and 1
-#define REROLL_SAME 1      // Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
+#define DICE_ROLLS_EQUAL 1 // OPTIMIZATION 1: Rolling 1 and 2 is the same as rolling 2 and 1
+#define REROLL_SAME 1      // OPTIMIZATION 2: Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
 
 class Node {
 public:
@@ -19,7 +19,7 @@ public:
         DICE_REROLL_OPTIONS_NODE
     };
 
-    // not yet implemented
+    // Not yet implemented
     double maxExpectedScore;
 
     // The two possible dice rolls. Make it public to not have to deal with getters and setters
@@ -27,10 +27,10 @@ public:
     int diceOne = {-1};
     int diceTwo = {-1};
 
-    // constructor
+    // Constructor
     Node(NodeType type, Node* parent = nullptr) : type(type), parent(parent), maxExpectedScore(-1.0) {}
 
-    // destructor
+    // Destructor
     virtual ~Node() {
         for (auto child : children) {
             delete child;
@@ -68,7 +68,7 @@ public:
         return children;
     }
 
-    //made public so that I can acces it more easily lol
+    // Made public so that I can access it more easily lol (don't try this at home)
     std::vector<Node*> children;
 private:
     NodeType type;
@@ -77,6 +77,7 @@ private:
 };
 
 void generateNodeTree(Node* node, int depth) {
+    // Break if we have reached the necessary depth
     if (depth == 0) {
         return;
     }
@@ -118,7 +119,7 @@ void generateNodeTree(Node* node, int depth) {
         numChildren = 4;
         #endif
         #ifdef DICE_ROLLS_EQUAL
-        // There are (up to) 3 children. If the parent was a reroll both, then we get three children:
+        // There are (up to) 3 children. If the parent was a reroll-both, then we get three children:
         // 1,1 and (1,2 AND 2,1) and 2,2.
         // If the parent only rerolled dice 1, (and dice 2 has value x) we get
         // 1,x and 2,x.
@@ -131,10 +132,10 @@ void generateNodeTree(Node* node, int depth) {
     } else if (node->getType() == Node::DICE_REROLL_OPTIONS_NODE) {
         childType = Node::ROOT_NODE;
         if (depth > 1) {
-            // there are two ways to score in the first round
+            // There are two ways to score in the first round
             numChildren = 2;
         } else {
-            // this is for the final nodes, now there is only one remaining option
+            // This is for the final nodes, now there is only one remaining option
             numChildren = 1;
         }
     } else {
@@ -148,19 +149,20 @@ void generateNodeTree(Node* node, int depth) {
         
         // Adding dice rolls to the DICE_NODEs.
         #ifdef REROLL_SAME
-        // if the current node is a ROOT_NODE, the children are DICE_NODE, and should contain the dice rolls.
+        // If the current node is a ROOT_NODE, the children are DICE_NODE, and should contain the dice rolls.
         if(node->getType() == Node::NodeType::ROOT_NODE)
         {
             if(i == 0)
             {
-                // this is why I made the children public. I tried doing node->getChild()->diceOne but it didn't work.
+                // This is why I made the children public. I tried doing node->getChild()->diceOne but it didn't work.
                 // other fixes might be to make this generateNodeTree function a friend of the Node class (so it can access private members)
                 // ??
-                // This works in any case.
+                // Anyway, this works.
                 node->children[i]->diceOne = 1;
                 node->children[i]->diceTwo = 1;
             }
-            if(i == 1) // this is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
+            // This is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
+            if(i == 1) 
             {
                 node->children[i]->diceOne = 1;
                 node->children[i]->diceTwo = 2;
@@ -176,7 +178,7 @@ void generateNodeTree(Node* node, int depth) {
 
         // Here we count how many nodes there are
         ++nodeCount;
-        // recursively make children
+        // Recursively make children
         generateNodeTree(child, depth - 1); 
     }
 }
@@ -246,7 +248,7 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
     gvFreeContext(gvc);
 }
 
-//not used
+// Not used
 void printNodeTree(const Node* rootNode, int depth = 0) {
     static const std::string INDENT_STRING = "  ";
     static const std::string TYPE_STRINGS[] = {
@@ -285,11 +287,12 @@ int main() {
     std::cout << "Using otimization reroll d1 = reroll d2 (when the parent dice is 1,1 or 2,2)...\n";
     #endif
 
-    //make 1 root node
+    // Make 1 root node
     std::vector<Node*> rootNodes(1);
+    // (Don't forget to count it)
     ++nodeCount;
 
-    //generate tree of depth 8
+    // Generate tree of depth 8
     for (auto& rootNode : rootNodes) {
         rootNode = new Node(Node::ROOT_NODE);
         generateNodeTree(rootNode, 8 );
@@ -297,15 +300,17 @@ int main() {
 
     std::cout << "In total, there are " << nodeCount << " nodes.\n";
 
-    //save as tree.svg (picture which you can open with your internet browser)
+    // Save as tree.svg (picture which you can open with your internet browser)
     std::string outputFilename = "tree";
-    std::string outputFiletype = "svg"; //you can also change to png
+    std::string outputFiletype = "svg"; //you can also change this to png
     outputFilename += "." + outputFiletype;
 
-    int maxSiblings = 4; //increasing this number shows more nodes which are on the same layer and makes the tree less readable. it also takes more time to generate tree
-    printTreeAsGraph(rootNodes, outputFilename, outputFiletype, maxSiblings); //generate tree figure
+    // Increasing this number shows more nodes which are on the same layer and makes the tree less readable. it also takes more time to generate tree
+    int maxSiblings = 4; 
+    // Generate tree figure
+    printTreeAsGraph(rootNodes, outputFilename, outputFiletype, maxSiblings); 
 
-    //delete tree
+    // Delete tree
     for (auto& rootNode : rootNodes) {
         delete rootNode;
     }
