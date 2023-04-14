@@ -6,6 +6,9 @@
 
 int nodeCount {};
 
+//#define NAIVE 1            // Upper bound for amount of nodes
+#define DICE_ROLLS_EQUAL 1 // rolling 1 and 2 is the same as rolling 2 and 1
+
 class Node {
 public:
     enum NodeType {
@@ -74,14 +77,22 @@ void generateNodeTree(Node* node, int depth) {
     int numChildren;
     if (node->getType() == Node::ROOT_NODE) {
         childType = Node::DICE_NODE;
+        #ifdef NAIVE
         // There are four children. Throwing 1 and 1, throwing 1 and 2, throwing 2 and 1 , and finally throwing 2 and 2
         numChildren = 4;
+        #endif
+
+        #ifdef DICE_ROLLS_EQUAL
+        // There are three children. Throwing 1 and 1, (throwing 1 and 2 AND throwing 2 and 1), and finally throwing 2 and 2
+        numChildren = 3;
+        #endif
     } else if (node->getType() == Node::DICE_NODE) {
         childType = Node::REROLL_CHOICE_NODE;
         // There are four children. Don't reroll, reroll dice 1, reroll dice 2, or rerolling both dice.
         numChildren = 4;
     } else if (node->getType() == Node::REROLL_CHOICE_NODE) {
         childType = Node::DICE_REROLL_OPTIONS_NODE;
+        #ifdef NAIVE
         // There are (up to) 4 children. If the parent was a reroll both, then we get four children:
         // 1,1 and 1,2 and 2,1 and 2,2.
         // If the parent only rerolled dice 1, (and dice 2 has value x) we get
@@ -90,6 +101,18 @@ void generateNodeTree(Node* node, int depth) {
         // If no dice are rerolled in the parent, it depends on how we implement it. I guess 1 child makes most sense
         // x,y where the values x and y are just the same values of the dice that were in the first round (remember, no rerolls here)
         numChildren = 4;
+        #endif
+        #ifdef DICE_ROLLS_EQUAL
+        // There are (up to) 3 children. If the parent was a reroll both, then we get three children:
+        // 1,1 and (1,2 AND 2,1) and 2,2.
+        // If the parent only rerolled dice 1, (and dice 2 has value x) we get
+        // 1,x and 2,x.
+        // vice versa for the other dice
+        // If no dice are rerolled in the parent, it depends on how we implement it. I guess 1 child makes most sense
+        // x,y where the values x and y are just the same values of the dice that were in the first round (remember, no rerolls here)
+        numChildren = 3;
+        #endif
+
     } else if (node->getType() == Node::DICE_REROLL_OPTIONS_NODE) {
         childType = Node::ROOT_NODE;
         if (depth > 1) {
@@ -197,6 +220,14 @@ void printNodeTree(const Node* rootNode, int depth = 0) {
 
 int main() {
     srand(static_cast<unsigned>(time(NULL)));
+
+    #ifdef NAIVE
+    std::cout << "Using naive tree generation...\n";
+    #endif
+
+    #ifdef DICE_ROLLS_EQUAL
+    std::cout << "(1,2) = (2,1)...\n";
+    #endif
 
     //make 1 root node
     std::vector<Node*> rootNodes(1);
