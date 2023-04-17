@@ -112,10 +112,7 @@ void generateNodeTree(Node* node, int depth) {
         {
             if(i == 0)
             {
-                // This is why I made the children public. I tried doing node->getChild()->diceOne but it didn't work.
-                // other fixes might be to make this generateNodeTree function a friend of the Node class (so it can access private members)
-                // ??
-                // Anyway, this works.
+                // Since generateNodeTree is a 'friend' function to node, it can access the private 'children' members.
                 node->children[i]->diceOne = 1;
                 node->children[i]->diceTwo = 1;
             }
@@ -224,9 +221,9 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
         ++initialSiblingIndex;
     }
 
-    agattr(graph, AGRAPH, (char *)"rankdir", (char *)"LR");  //print from left to right
+    agattr(graph, AGRAPH, (char *)"rankdir", (char *)"LR");  // print from left to right
     agattr(graph, AGRAPH, (char *)"nodesep", (char *)"1.5"); // increase the nodesep attribute
-    gvLayout(gvc, graph, "dot"); //you can try to replace dot by neato, maybe it looks better (might take longer to generate). there are more options: https://graphviz.org/docs/layouts/
+    gvLayout(gvc, graph, "dot"); // Use "dot" or "neato", more options: https://graphviz.org/docs/layouts/
 
     // Save to 'graphs' folder:
     std::string outputFolderName = "graphs/";

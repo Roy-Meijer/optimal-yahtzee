@@ -1,4 +1,4 @@
-//#pragma once
+#pragma once
 
 class Node {
 public:
@@ -19,8 +19,6 @@ public:
         REROLL_BOTH,
         REROLL_NA
     };
-
-   
 
     // The two possible dice rolls. Make it public to not have to deal with getters and setters
     // Two ints instead of array so I don't have to deal with array pointers and stuff
@@ -78,11 +76,13 @@ public:
         return children;
     }
 
-    // Made public so that I can access it more easily lol (don't try this at home)
-    std::vector<Node*> children;
+    // generateNodeTree is a friend so that it can access the private std::vector<Node*> children variable;
+    friend void generateNodeTree(Node* node, int depth);
+
 private:
     NodeType type;
     Node* parent;
-    REROLL_TYPE reroll_decision; // add this line to declare the reroll_decision variable
-    //std::vector<Node*> children;
+    std::vector<Node*> children;
+    // To declare the reroll_decision variable
+    REROLL_TYPE reroll_decision; 
 };
