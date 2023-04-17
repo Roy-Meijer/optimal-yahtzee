@@ -215,24 +215,25 @@ void generateNodeTree(Node* node, int depth) {
         }
         #endif
 
-        //Assigning the reroll decision for dice nodes
+        //Assigning the reroll decision for the children of dice nodes
         #ifdef REROLLS_OPTIMIZED
-        
-        if (i == 0)    
+        if(node->getType() == Node::NodeType::DICE_NODE)
         {
-            node->setRerollDecision(node->children[i], Node::REROLL_TYPE::NO_REROLLS);
+            if (i == 0)    
+            {
+                node->setRerollDecision(node->children[i], Node::REROLL_TYPE::NO_REROLLS);
+            }
+            //if there are 3 child nodes, the second will be reroll one dice
+            // if there are 4 child nodes, the second and the third will be roll one dice
+            else if ( (i == 1) || (i == 2 && numChildren == 4))    
+            {
+                node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_ONEDICE);
+            }
+            else if ( (i == 2 && numChildren == 3) || i == 3)    
+            {
+                node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_BOTH);
+            }
         }
-        //if there are 3 child nodes, the second will be reroll one dice
-        // if there are 4 child nodes, the second and the thired will be roll one dice
-        else if ( (i == 1) || (i == 2 && numChildren == 4))    
-        {
-            node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_ONEDICE);
-        }
-        else if ( (i == 2 && numChildren == 3) || i == 3)    
-        {
-             node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_BOTH);
-        }
-
         #endif
 
         // Here we count how many nodes there are
