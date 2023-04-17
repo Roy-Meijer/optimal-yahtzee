@@ -9,6 +9,7 @@ int nodeCount {};
 //#define NAIVE 1            // Upper bound for amount of nodes
 #define DICE_ROLLS_EQUAL 1 // OPTIMIZATION 1: Rolling 1 and 2 is the same as rolling 2 and 1
 #define REROLL_SAME 1      // OPTIMIZATION 2: Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
+#define REROLLS_OPTIMIZED 1 // OPTIMZATION 3: Rerolling 1 dice shall have 2 children only, rerolling 2 dice of same value should have 3 childrem and rerolling none should only have one children
 
 class Node {
 public:
@@ -22,6 +23,16 @@ public:
     // Not yet implemented
     double maxExpectedScore;
 
+    // will be better to implement each node in a separate class and use inheritance instead, but to save time that is skipped for now
+    enum REROLL_TYPE {
+        NO_REROLLS = 0,
+        REROLL_ONEDICE = 1,
+        REROLL_BOTH = 2,
+        NOTAPPLICABLE = 99
+    };
+
+   
+
     // The two possible dice rolls. Make it public to not have to deal with getters and setters
     // Two ints instead of array so I don't have to deal with array pointers and stuff
     int diceOne = {-1};
@@ -29,6 +40,8 @@ public:
 
     // Constructor
     Node(NodeType type, Node* parent = nullptr) : type(type), parent(parent), maxExpectedScore(-1.0) {}
+    //constructor overloading, in the case of a reroll node being implemented
+    Node(NodeType type, REROLL_TYPE reroll_decision, Node* parent = nullptr): type(type), parent(parent), maxExpectedScore(-1.0), reroll_decision(NOTAPPLICABLE)  {}
 
     // Destructor
     virtual ~Node() {
@@ -43,6 +56,10 @@ public:
 
     Node* getParent() const {
         return parent;
+    }
+
+    REROLL_TYPE getRerollDecision() const {
+        return reroll_decision;
     }
 
     void setParent(Node* newParent) {
@@ -73,6 +90,7 @@ public:
 private:
     NodeType type;
     Node* parent;
+    REROLL_TYPE reroll_decision; // add this line to declare the reroll_decision variable
     //std::vector<Node*> children;
 };
 
@@ -99,6 +117,8 @@ void generateNodeTree(Node* node, int depth) {
         childType = Node::REROLL_CHOICE_NODE;
         // There are four children. Don't reroll, reroll dice 1, reroll dice 2, or rerolling both dice.
         numChildren = 4;
+        
+
         // When first roll is 1,1 or 2,2 then rerolling dice 1 and dice 2 is the same. Gives three children!
         #ifdef REROLL_SAME
         if( (node->diceOne == 1 && node->diceTwo == 1) || (node->diceOne == 2 && node->diceTwo == 2))
@@ -127,6 +147,20 @@ void generateNodeTree(Node* node, int depth) {
         // If no dice are rerolled in the parent, it depends on how we implement it. I guess 1 child makes most sense
         // x,y where the values x and y are just the same values of the dice that were in the first round (remember, no rerolls here)
         numChildren = 3;
+        #endif
+        #ifdef REREOLLS_OPTIMIZED
+        // depending on the decision that was taken in the choice node the number of children will differ
+        // No rerolls: Only one child (the same outcome of the parent. i.e., die values do not change)
+        // reroll dice one/reroll dice two: two children each (rerolled die either one or two, not rerolled die stays the same)
+        // reroll both: has three children (1,1), (1,2)/(2,1), (2,2)
+
+        // Needs to be implemented: the previous decision (Reroll one, two or none)
+        if (node->getRerollDecision() == Node::REROLL_TYPE::NO_REROLLS)
+            numChildren = 1;
+        else if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_ONEDICE) 
+            numChildren = 2;
+        else if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_BOTH) 
+            numChildren = 3;
         #endif
 
     } else if (node->getType() == Node::DICE_REROLL_OPTIONS_NODE) {
@@ -174,6 +208,28 @@ void generateNodeTree(Node* node, int depth) {
             }           
 
         }
+        #endif
+
+        //Assigning the reroll decision for dice nodes
+        #ifdef REREOLLS_OPTIMIZED
+    
+        if (i == 0)    
+        {
+            node->children[i]->reroll_decision = Node::REROLL_TYPE::NO_REROLLS;
+        }
+        else if (i == 1)    
+        {
+            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_ONEDICE;
+        }
+        else if (i == 2 && numChildren = 3)    
+        {
+            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_ONEDICE;
+        }
+        else if ((i == 2 && numChildren = 3) || i == 3)    
+        {
+            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_BOTH;
+        }
+
         #endif
 
         // Here we count how many nodes there are
