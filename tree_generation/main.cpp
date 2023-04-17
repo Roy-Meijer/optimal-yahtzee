@@ -97,6 +97,7 @@ void generateNodeTree(Node* node, int depth) {
             numChildren = 1;
         }
     } else {
+        std::cerr << "Error: This statement should not occur!\n";
         return;
     }
 
@@ -239,28 +240,28 @@ int main() {
     srand(static_cast<unsigned>(time(NULL)));
 
     #ifdef NAIVE
-    std::cout << "Using naive tree generation...\n";
+        std::cout << "Using naive tree generation...\n";
     #endif
 
     #ifdef DICE_ROLLS_EQUAL
-    std::cout << "Using optimization: (1,2) = (2,1)...\n";
+        std::cout << "Using optimization: (1,2) = (2,1)...\n";
     #endif
 
     #ifdef NAIVE
-    #ifdef DICE_ROLLS_EQUAL
-    std::cout << "ERROR! These shouldn't be on at the same time.\n";
-    #endif
+        #ifdef DICE_ROLLS_EQUAL
+            std::cerr << "ERROR! These defines shouldn't be on at the same time.\n";
+        #endif
     #endif
 
     #ifdef REROLL_SAME
-    std::cout << "Using optimization: reroll d1 = reroll d2 (when the parent dice is 1,1 or 2,2)...\n";
+        std::cout << "Using optimization: reroll d1 = reroll d2 (when the parent dice is 1,1 or 2,2)...\n";
     #endif
 
     #ifdef REROLLS_OPTIMIZED
-    std::cout << "Using optimization: reroll d1/d2 has two children, reroll d1 AND d2 has three children...\n";
+        std::cout << "Using optimization: reroll d1/d2 has two children, reroll d1 AND d2 has three children...\n";
     #endif
 
-    // Make 1 root node
+    // Make the root node (start of round 1)
     std::vector<Node*> rootNodes(1);
     // (don't forget to count it)
     ++nodeCount;
