@@ -77,7 +77,7 @@ public:
     }
 
     // generateNodeTree is a friend so that it can access the private std::vector<Node*> children variable;
-    friend void generateNodeTree(Node* node, int depth);
+    friend void generateNodeTree(Node* node, int depth, Node* child1_1, Node* child1_2, Node* child2_2);
 
 private:
     NodeType type;
