@@ -62,6 +62,11 @@ public:
         return reroll_decision;
     }
 
+    void setRerollDecision(Node* node, Node::REROLL_TYPE reroll_dec)
+    {
+        node->reroll_decision = reroll_dec;
+    }
+
     void setParent(Node* newParent) {
         parent = newParent;
     }
@@ -148,7 +153,7 @@ void generateNodeTree(Node* node, int depth) {
         // x,y where the values x and y are just the same values of the dice that were in the first round (remember, no rerolls here)
         numChildren = 3;
         #endif
-        #ifdef REREOLLS_OPTIMIZED
+        #ifdef REROLLS_OPTIMIZED
         // depending on the decision that was taken in the choice node the number of children will differ
         // No rerolls: Only one child (the same outcome of the parent. i.e., die values do not change)
         // reroll dice one/reroll dice two: two children each (rerolled die either one or two, not rerolled die stays the same)
@@ -211,23 +216,21 @@ void generateNodeTree(Node* node, int depth) {
         #endif
 
         //Assigning the reroll decision for dice nodes
-        #ifdef REREOLLS_OPTIMIZED
-    
+        #ifdef REROLLS_OPTIMIZED
+        
         if (i == 0)    
         {
-            node->children[i]->reroll_decision = Node::REROLL_TYPE::NO_REROLLS;
+            node->setRerollDecision(node->children[i], Node::REROLL_TYPE::NO_REROLLS);
         }
-        else if (i == 1)    
+        //if there are 3 child nodes, the second will be reroll one dice
+        // if there are 4 child nodes, the second and the thired will be roll one dice
+        else if ( (i == 1) || (i == 2 && numChildren == 4))    
         {
-            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_ONEDICE;
+            node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_ONEDICE);
         }
-        else if (i == 2 && numChildren = 3)    
+        else if ( (i == 2 && numChildren == 3) || i == 3)    
         {
-            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_ONEDICE;
-        }
-        else if ((i == 2 && numChildren = 3) || i == 3)    
-        {
-            node->children[i]->reroll_decision = Node::REROLL_TYPE::REROLL_BOTH;
+             node->setRerollDecision(node->children[i], Node::REROLL_TYPE::REROLL_BOTH);
         }
 
         #endif
