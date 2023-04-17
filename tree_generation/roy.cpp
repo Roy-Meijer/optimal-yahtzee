@@ -25,10 +25,10 @@ public:
 
     // will be better to implement each node in a separate class and use inheritance instead, but to save time that is skipped for now
     enum REROLL_TYPE {
-        NO_REROLLS = 0,
-        REROLL_ONEDICE = 1,
-        REROLL_BOTH = 2,
-        NOTAPPLICABLE = 99
+        NO_REROLLS,
+        REROLL_ONEDICE,
+        REROLL_BOTH,
+        REROLL_NA
     };
 
    
@@ -39,9 +39,8 @@ public:
     int diceTwo = {-1};
 
     // Constructor
-    Node(NodeType type, Node* parent = nullptr) : type(type), parent(parent), maxExpectedScore(-1.0) {}
     //constructor overloading, in the case of a reroll node being implemented
-    Node(NodeType type, REROLL_TYPE reroll_decision, Node* parent = nullptr): type(type), parent(parent), maxExpectedScore(-1.0), reroll_decision(NOTAPPLICABLE)  {}
+    Node(NodeType type, REROLL_TYPE reroll_decision=REROLL_NA, Node* parent = nullptr): type(type), parent(parent), maxExpectedScore(-1.0), reroll_decision(REROLL_NA)  {}
 
     // Destructor
     virtual ~Node() {
@@ -217,7 +216,7 @@ void generateNodeTree(Node* node, int depth) {
 
         //Assigning the reroll decision for the children of dice nodes
         #ifdef REROLLS_OPTIMIZED
-        if(node->getType() == Node::NodeType::DICE_NODE)
+         if(node->getType() == Node::NodeType::DICE_NODE)
         {
             if (i == 0)    
             {
@@ -257,9 +256,15 @@ void printGraphvizNodeTree(const Node* node, Agraph_t* graph, Agnode_t* parentAg
         "purple"
     };
 
+    static const std::string TYPE_REROLL[] = {
+        "reroll none",
+        "reroll one",
+        "reroll both"
+    };
+
     if (siblingIndex >= maxSiblings) {
         if (siblingIndex == maxSiblings) {
-            std::string nodeName = "ellipsis_" + std::to_string(depth) + "_" + std::to_string(reinterpret_cast<uintptr_t>(node));
+           std::string nodeName = "ellipsis_" + std::to_string(depth) + "_" + std::to_string(reinterpret_cast<uintptr_t>(node));
             Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
             agsafeset(currentNode, const_cast<char*>("color"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
             agset(currentNode, const_cast<char*>("label"), const_cast<char*>("..."));
@@ -268,7 +273,7 @@ void printGraphvizNodeTree(const Node* node, Agraph_t* graph, Agnode_t* parentAg
         return;
     }
 
-    std::string nodeName = TYPE_STRINGS[node->getType()] + "_" + std::to_string(reinterpret_cast<uintptr_t>(node));
+    std::string nodeName = TYPE_STRINGS[node->getType()] + "_" + TYPE_REROLL[node->getRerollDecision()] + "_" +  std::to_string(reinterpret_cast<uintptr_t>(node));
     Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
     agsafeset(currentNode, const_cast<char*>("color"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
 
