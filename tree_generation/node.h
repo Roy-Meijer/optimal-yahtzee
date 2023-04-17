@@ -1,14 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <graphviz/gvc.h>
-#include <graphviz/cgraph.h>
-
-int nodeCount {};
-
-//#define NAIVE 1            // Upper bound for amount of nodes
-#define DICE_ROLLS_EQUAL 1 // OPTIMIZATION 1: Rolling 1 and 2 is the same as rolling 2 and 1
-#define REROLL_SAME 1      // OPTIMIZATION 2: Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
+//#pragma once
 
 class Node {
 public:
@@ -22,13 +12,24 @@ public:
     // Not yet implemented
     double maxExpectedScore;
 
+    // It would be better to implement each node in a separate class and use inheritance instead, but to save time that is skipped for now
+    enum REROLL_TYPE {
+        NO_REROLLS,
+        REROLL_ONEDICE,
+        REROLL_BOTH,
+        REROLL_NA
+    };
+
+   
+
     // The two possible dice rolls. Make it public to not have to deal with getters and setters
     // Two ints instead of array so I don't have to deal with array pointers and stuff
     int diceOne = {-1};
     int diceTwo = {-1};
 
     // Constructor
-    Node(NodeType type, Node* parent = nullptr) : type(type), parent(parent), maxExpectedScore(-1.0) {}
+    // Constructor overloading, in the case of a reroll node being implemented
+    Node(NodeType type, REROLL_TYPE reroll_decision=REROLL_NA, Node* parent = nullptr): type(type), parent(parent), maxExpectedScore(-1.0), reroll_decision(REROLL_NA)  {}
 
     // Destructor
     virtual ~Node() {
@@ -43,6 +44,15 @@ public:
 
     Node* getParent() const {
         return parent;
+    }
+
+    REROLL_TYPE getRerollDecision() const {
+        return reroll_decision;
+    }
+
+    void setRerollDecision(Node* node, Node::REROLL_TYPE reroll_dec)
+    {
+        node->reroll_decision = reroll_dec;
     }
 
     void setParent(Node* newParent) {
@@ -73,5 +83,6 @@ public:
 private:
     NodeType type;
     Node* parent;
+    REROLL_TYPE reroll_decision; // add this line to declare the reroll_decision variable
     //std::vector<Node*> children;
 };

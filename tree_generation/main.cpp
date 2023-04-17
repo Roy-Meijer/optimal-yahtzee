@@ -1,103 +1,22 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
+//--------------------------
 #include <graphviz/gvc.h>
 #include <graphviz/cgraph.h>
+//--------------------------
+#include "Node.h"
 
-int nodeCount {};
-
+// Optimizations: ------------------------------------------
 //#define NAIVE 1            // Upper bound for amount of nodes
 #define DICE_ROLLS_EQUAL 1  // OPTIMIZATION 1: Rolling 1 and 2 is the same as rolling 2 and 1
 #define REROLL_SAME 1       // OPTIMIZATION 2: Rerolling dice 1 and dice 2 is the same if in the first throw the dice were the same.
 #define REROLLS_OPTIMIZED 1 // OPTIMIZATION 3: Rerolling 1 dice shall have 2 children only, rerolling 2 dice of same value should have 3 children and rerolling none should only have one child (passthrough)
+//-----------------------------------------------------------
 
-class Node {
-public:
-    enum NodeType {
-        ROOT_NODE,
-        DICE_NODE,
-        REROLL_CHOICE_NODE,
-        DICE_REROLL_OPTIONS_NODE
-    };
+#define NR_OF_ROUNDS 2
 
-    // Not yet implemented
-    double maxExpectedScore;
-
-    // It would be better to implement each node in a separate class and use inheritance instead, but to save time that is skipped for now
-    enum REROLL_TYPE {
-        NO_REROLLS,
-        REROLL_ONEDICE,
-        REROLL_BOTH,
-        REROLL_NA
-    };
-
-   
-
-    // The two possible dice rolls. Make it public to not have to deal with getters and setters
-    // Two ints instead of array so I don't have to deal with array pointers and stuff
-    int diceOne = {-1};
-    int diceTwo = {-1};
-
-    // Constructor
-    // Constructor overloading, in the case of a reroll node being implemented
-    Node(NodeType type, REROLL_TYPE reroll_decision=REROLL_NA, Node* parent = nullptr): type(type), parent(parent), maxExpectedScore(-1.0), reroll_decision(REROLL_NA)  {}
-
-    // Destructor
-    virtual ~Node() {
-        for (auto child : children) {
-            delete child;
-        }
-    }
-
-    NodeType getType() const {
-        return type;
-    }
-
-    Node* getParent() const {
-        return parent;
-    }
-
-    REROLL_TYPE getRerollDecision() const {
-        return reroll_decision;
-    }
-
-    void setRerollDecision(Node* node, Node::REROLL_TYPE reroll_dec)
-    {
-        node->reroll_decision = reroll_dec;
-    }
-
-    void setParent(Node* newParent) {
-        parent = newParent;
-    }
-
-    void addChild(Node* child) {
-        children.push_back(child);
-        child->setParent(this);
-    }
-
-    void removeChild(Node* child) {
-        auto it = std::find_if(children.begin(), children.end(),
-            [=](Node* node) { return node == child; });
-
-        if (it != children.end()) {
-            children.erase(it);
-            child->setParent(nullptr);
-        }
-    }
-
-    const std::vector<Node*>& getChildren() const {
-        return children;
-    }
-
-    // Made public so that I can access it more easily lol (don't try this at home)
-    std::vector<Node*> children;
-private:
-    NodeType type;
-    Node* parent;
-    REROLL_TYPE reroll_decision; // add this line to declare the reroll_decision variable
-    //std::vector<Node*> children;
-};
+int nodeCount= {};
 
 void generateNodeTree(Node* node, int depth) {
     // Break if we have reached the necessary depth
@@ -284,7 +203,8 @@ void printGraphvizNodeTree(const Node* node, Agraph_t* graph, Agnode_t* parentAg
 
     int childIndex = 0;
     for (const auto& child : node->getChildren()) {
-        printGraphvizNodeTree(child, graph, currentNode, depth + 1, childIndex, maxSiblings); //this is the recursive part
+         // This is the recursive part
+        printGraphvizNodeTree(child, graph, currentNode, depth + 1, childIndex, maxSiblings);
         ++childIndex;
     }
 }
@@ -298,13 +218,13 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
 
     int initialSiblingIndex = 0;
 
-    //recursively generate tree visualisation
+    // Recursively generate tree visualisation
     for (const auto& node : rootNodes) {
         printGraphvizNodeTree(node, graph, sharedParentNode, 0, initialSiblingIndex, maxSiblings);
         ++initialSiblingIndex;
     }
 
-    agattr(graph, AGRAPH, (char *)"rankdir", (char *)"LR"); //print from left to right
+    agattr(graph, AGRAPH, (char *)"rankdir", (char *)"LR");  //print from left to right
     agattr(graph, AGRAPH, (char *)"nodesep", (char *)"1.5"); // increase the nodesep attribute
     gvLayout(gvc, graph, "dot"); //you can try to replace dot by neato, maybe it looks better (might take longer to generate). there are more options: https://graphviz.org/docs/layouts/
 
@@ -316,24 +236,6 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
 
     agclose(graph);
     gvFreeContext(gvc);
-}
-
-// Not used
-void printNodeTree(const Node* rootNode, int depth = 0) {
-    static const std::string INDENT_STRING = "  ";
-    static const std::string TYPE_STRINGS[] = {
-        "roll",
-        "dice",
-        "reroll",
-        "redice"
-    };
-
-    std::cout << std::string(depth * INDENT_STRING.size(), ' ')
-              << TYPE_STRINGS[rootNode->getType()] << " (" << depth << ")" << std::endl;
-
-    for (const auto& child : rootNode->getChildren()) {
-        printNodeTree(child, depth + 1);
-    }
 }
 
 int main() {
@@ -363,13 +265,13 @@ int main() {
 
     // Make 1 root node
     std::vector<Node*> rootNodes(1);
-    // (Don't forget to count it)
+    // (don't forget to count it)
     ++nodeCount;
 
-    // Generate tree of depth 8
+    // Generate tree of two rounds (each round has 4 levels of nodes)
     for (auto& rootNode : rootNodes) {
         rootNode = new Node(Node::ROOT_NODE);
-        generateNodeTree(rootNode, 8 );
+        generateNodeTree(rootNode, NR_OF_ROUNDS*4 );
     }
 
     std::cout << "In total, there are " << nodeCount << " nodes.\n";
