@@ -122,9 +122,9 @@ public:
     // Can be called only from a root node
     std::vector<Node*>* generateOutcomeNodes(Node* node)
     {
-        //if (scoreOptions == nullptr) {
-        //    scoreOptions = new std::vector<Node*>();
-        //}
+        if (scoreOptions == nullptr) {
+            scoreOptions = new std::vector<Node*>();
+        }
 
         if (node->scoreOptions == nullptr)
         {

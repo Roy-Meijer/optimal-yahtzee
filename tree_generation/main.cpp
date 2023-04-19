@@ -29,7 +29,9 @@ void generateNodeTree(Node* node, int depth) {
         if (node->getType() == Node::REROLL_CHOICE_NODE)
         {   
             Node* rootNode = node->getParent()->front()->getParent()->front();
+            std::cout << "rootNode: " << rootNode << "\n";
             std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode);
+            std::cout << "outcomeNodes: " << outcomeNodes << "\n";
             
             AssignOutcomesForRerolls(node, outcomeNodes);
             nodeCount += 3; 
