@@ -30,8 +30,9 @@ public:
     int secondDice = {-1};
 
     // Constructor
-// Constructor overloading, in the case of a reroll node being implemented
-Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<Node*>* scoreOptions = nullptr, REROLL_TYPE reroll_decision = REROLL_NA) : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0) {}
+    // Constructor overloading, in the case of a reroll node being implemented
+    Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<Node*>* scoreOptions = nullptr, std::vector<Node*>* children = nullptr, REROLL_TYPE reroll_decision = REROLL_NA)
+    : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0), children(children) {}
 
     // Destructor
     virtual ~Node() {
@@ -68,37 +69,38 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
     }
 
     void setParent(Node* newParent) {
-        if (parent == nullptr)
+        if (parent == nullptr) {
             parent = new std::vector<Node*>();
+        }
         
         //only add the newParent if it is not already a parent of the current node
-        if (std::find(parent->begin(), parent->end(), newParent) == parent->end() )
+        if (std::find(parent->begin(), parent->end(), newParent) == parent->end() ) {
             parent->push_back(newParent);
+        }
     }
 
     void addChild(Node* child) {
-        if (children == nullptr)
+        if (children == nullptr) {
             children = new std::vector<Node*>();
+        }
 
         // set the child node type based on the current node type
-        if (type == Node::NodeType::ROOT_NODE || type == Node::NodeType::SCORE_ROOT_NODE)
+        if (type == Node::NodeType::ROOT_NODE || type == Node::NodeType::SCORE_ROOT_NODE) {
             child->setType(Node::NodeType::DICE_NODE);
-        else if (type == Node::NodeType::DICE_NODE)
-        {
+        } else if (type == Node::NodeType::DICE_NODE) {
             // if current node is dice node, assign dice values to the child nodes
             // This will simplify the process of deciding the children of reroll nodes (outcomes)
             child->setType(Node::NodeType::REROLL_CHOICE_NODE);
             // Assign the dice values from the current node to its child node
             child->setDiceValues(firstDice, secondDice);
-        }
-            
-        else if (type == Node::NodeType::REROLL_CHOICE_NODE)
+        } else if (type == Node::NodeType::REROLL_CHOICE_NODE) {
             child->setType(Node::NodeType::OUTCOME_NODE);
-        else if (type == Node::NodeType::OUTCOME_NODE)
+        } else if (type == Node::NodeType::OUTCOME_NODE) {
             child->setType(Node::NodeType::SCORE_ROOT_NODE);
-        else
+        } else {
             std::cerr << "Error: undefined node type\n"; 
-            
+        }
+        
         children->push_back(child);
         child->setParent(this);
     }
@@ -113,16 +115,6 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
         numChildren = count;
     }
 
-    void removeChild(Node* child) {
-        auto it = std::find_if(children->begin(), children->end(),
-            [=](Node* node) { return node == child; });
-
-        if (it != children->end()) {
-            children->erase(it);
-            child->setParent(nullptr);
-        }
-    }
-
     std::vector<Node*>* getChildren() {
         return children;
     }
@@ -130,6 +122,10 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
     // Can be called only from a root node
     std::vector<Node*>* generateOutcomeNodes(Node* node)
     {
+        //if (scoreOptions == nullptr) {
+        //    scoreOptions = new std::vector<Node*>();
+        //}
+
         if (node->scoreOptions == nullptr)
         {
             if (node->getType() == Node::NodeType::ROOT_NODE)
@@ -139,6 +135,7 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
                 Node* score_12 = new Node(Node::OUTCOME_NODE);
                 Node* score_22 = new Node(Node::OUTCOME_NODE);
 
+                std::cout << "scoreOptions: " << scoreOptions << "->push_back(" << score_11 << ")\n";
                 scoreOptions->push_back(score_11);
                 scoreOptions->push_back(score_12);
                 scoreOptions->push_back(score_22);

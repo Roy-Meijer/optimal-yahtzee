@@ -11,8 +11,8 @@
 
 int nodeCount = {};
 void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes); 
-void AssignRerollDecisions(Node* node);
-void AssignDiceValues(Node* node);
+void AssignRerollDecisions(Node* node, int childIndex);
+void AssignDiceValues(Node* node, int childIndex);
 void generateChildrenCount(Node* node, int depth);
 
 void generateNodeTree(Node* node, int depth) {
@@ -29,7 +29,7 @@ void generateNodeTree(Node* node, int depth) {
         if (node->getType() == Node::REROLL_CHOICE_NODE)
         {   
             Node* rootNode = node->getParent()->front()->getParent()->front();
-            std::vector<Node*>* outcomeNodes =  rootNode->generateOutcomeNodes(rootNode);
+            std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode);
             
             AssignOutcomesForRerolls(node, outcomeNodes);
             nodeCount += 3; 
@@ -49,11 +49,11 @@ void generateNodeTree(Node* node, int depth) {
             ++nodeCount;
 
             if(node->getType() == Node::NodeType::ROOT_NODE)
-                AssignDiceValues(node);
+                AssignDiceValues(node, i);
             
             //Assigning Reroll decisions for the Reroll nodes (i.e., Children of Dice Nodes)
             if(node->getType() == Node::NodeType::DICE_NODE)
-                AssignRerollDecisions(node);
+                AssignRerollDecisions(node, i);
 
             // Recursively make children
             generateNodeTree(child, depth - 1);
@@ -187,60 +187,57 @@ void generateChildrenCount(Node* node, int depth)
     }
 }
 
-void AssignDiceValues(Node* node)
+void AssignDiceValues(Node* node, int childIndex)
 {
-    for (int i = 0; i < node->getChildrenCount(); ++i)
+    // Assigning value to DICE_NODES (1,1), (1,2), (2,2)
+    assert(node->getType() == Node::NodeType::ROOT_NODE);
+    
+    std::vector<Node*>* children = node->getChildren();
+    if(childIndex == 0)
     {
-        // Assigning value to DICE_NODES (1,1), (1,2), (2,2)
-        assert(node->getType() == Node::NodeType::ROOT_NODE);
-        
-        std::vector<Node*>* children = node->getChildren();
-        if(i == 0)
-        {
-            // Since generateNodeTree is a 'friend' function to node, it can access the private 'children' members.
-            children->at(i)->firstDice = 1;
-            children->at(i)->secondDice = 1;
-        }
-        // This is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
-        else if(i == 1) 
-        {
-            children->at(i)->firstDice = 1;
-            children->at(i)->secondDice = 2;
-        }
-        else if(i == 2)
-        {
-            children->at(i)->firstDice = 2;
-            children->at(i)->secondDice = 2;
-        }           
-        
+        // Since generateNodeTree is a 'friend' function to node, it can access the private 'children' members.
+        children->at(childIndex)->firstDice = 1;
+        children->at(childIndex)->secondDice = 1;
+    }
+    // This is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
+    else if(childIndex == 1) 
+    {
+        children->at(childIndex)->firstDice = 1;
+        children->at(childIndex)->secondDice = 2;
+    }
+    else if(childIndex == 2)
+    {
+        children->at(childIndex)->firstDice = 2;
+        children->at(childIndex)->secondDice = 2;
+    } else {
+        std::cerr << "Child index invalid: " << childIndex << "\n";
     }
 }
 
-void AssignRerollDecisions(Node* node)
+void AssignRerollDecisions(Node* node, int childIndex)
 {
     assert(node->getType() == Node::NodeType::DICE_NODE);
     // Assigning the reroll decision for the children of dice nodes
-    for (int i = 0; i < node->getChildrenCount(); ++i)
+    std::vector<Node*>* children = node->getChildren();
+    if (childIndex == 0)    
     {
-        std::vector<Node*>* children = node->getChildren();
-        if (i == 0)    
-        {
-            node->setRerollDecision(children->at(i), Node::REROLL_TYPE::NO_REROLLS);
-        }
-        // if there are 3 child nodes, the second will be reroll one dice
-        // if there are 4 child nodes, the second and the third will be roll one dice
-        else if (i == 1 && node->getChildrenCount() == 4)    // i.e., the children dice values are (1,2)
-        {
-            node->setRerollDecision(children->at(i), Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE);
-        }
-        else if (i == 2 && node->getChildrenCount() == 4)    // i.e., the children dice values are (2,1)
-        {
-            node->setRerollDecision(children->at(i), Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO);
-        }
-        else if ( (i == 2 && node->getChildrenCount() == 3) || i == 3)    
-        {
-            node->setRerollDecision(children->at(i), Node::REROLL_TYPE::REROLL_BOTH);
-        }
+        node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::NO_REROLLS);
+    }
+    // if there are 3 child nodes, the second will be reroll one dice
+    // if there are 4 child nodes, the second and the third will be roll one dice
+    else if (childIndex == 1 && node->getChildrenCount() == 4)    // i.e., the children dice values are (1,2)
+    {
+        node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE);
+    }
+    else if (childIndex == 2 && node->getChildrenCount() == 4)    // i.e., the children dice values are (2,1)
+    {
+        node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO);
+    }
+    else if ( (childIndex == 2 && node->getChildrenCount() == 3) || childIndex == 3)    
+    {
+        node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_BOTH);
+    } else {
+        std::cerr << "Child index invalid: " << childIndex << "\n";
     }
 }
 
