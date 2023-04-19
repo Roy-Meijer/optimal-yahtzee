@@ -31,7 +31,7 @@ void generateNodeTree(Node* node, int depth) {
             Node* rootNode = node->getParent()->front()->getParent()->front();
             std::cout << "rootNode: " << rootNode << "\n";
             std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode);
-            std::cout << "outcomeNodes: " << outcomeNodes << "\n";
+            std::cout << "outcomeNodes: " << outcomeNodes->front()->firstDice  << ", " << outcomeNodes->front()->secondDice << "\n";
             
             AssignOutcomesForRerolls(node, outcomeNodes);
             nodeCount += 3; 
@@ -108,8 +108,8 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
     }
 
     int childIndex = 0;
-    auto pChildren = node->getChildren();
-    for (const auto child : *pChildren) {
+    std::vector<Node*>::iterator  IterChildren = node->getChildren()->begin();
+    for (IterChildren; IterChildren < node->getChildren()->end(); ) {
         // This is the recursive part
         printGraphvizNodeTree(child, graph, currentNode, depth + 1, childIndex, maxSiblings);
         ++childIndex;
@@ -202,7 +202,7 @@ void AssignDiceValues(Node* node, int childIndex)
         children->at(childIndex)->secondDice = 1;
     }
     // This is the dual case (so right now this only works correctly when the NAIVE optimization is NOT ON, but the 1,2=2,1 optimization is ON)
-    else if(childIndex == 1) 
+    else if (childIndex == 1) 
     {
         children->at(childIndex)->firstDice = 1;
         children->at(childIndex)->secondDice = 2;
@@ -227,11 +227,11 @@ void AssignRerollDecisions(Node* node, int childIndex)
     }
     // if there are 3 child nodes, the second will be reroll one dice
     // if there are 4 child nodes, the second and the third will be roll one dice
-    else if (childIndex == 1 && node->getChildrenCount() == 4)    // i.e., the children dice values are (1,2)
+    else if ((childIndex == 1 && node->getChildrenCount() == 4) || (children->at(childIndex)->firstDice == children->at(childIndex)->secondDice && children->at(childIndex)->firstDice == 1))    // i.e., the children dice values are (1,2)
     {
         node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE);
     }
-    else if (childIndex == 2 && node->getChildrenCount() == 4)    // i.e., the children dice values are (2,1)
+    else if (childIndex == 2 && node->getChildrenCount() == 4 || (children->at(childIndex)->firstDice == children->at(childIndex)->secondDice && children->at(childIndex)->firstDice == 2))    // i.e., the children dice values are (2,1)
     {
         node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO);
     }
