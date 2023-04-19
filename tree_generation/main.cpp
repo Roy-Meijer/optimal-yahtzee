@@ -10,6 +10,10 @@
 #define NR_OF_ROUNDS 2
 
 int nodeCount = {};
+void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes); 
+void AssignRerollDecisions(Node* node);
+void AssignDiceValues(Node* node);
+void generateChildrenCount(Node* node, int depth);
 
 void generateNodeTree(Node* node, int depth) {
     // Break if we have reached the necessary depth
@@ -17,63 +21,48 @@ void generateNodeTree(Node* node, int depth) {
         return;
     }
 
-    generateChildrenCount(node);
+    generateChildrenCount(node, depth);
 
     // Generating the children
     for (int i = 0; i < node->getChildrenCount(); ++i) {
         // Reroll choice nodes have outcome nodes as children, outcome nodes are pre-generated
         if (node->getType() == Node::REROLL_CHOICE_NODE)
-        {
+        {   
             Node* rootNode = node->getParent()->front()->getParent()->front();
             std::vector<Node*>* outcomeNodes =  rootNode->generateOutcomeNodes(rootNode);
             
-            Node* outcome_11 = outcomeNodes->at(0);
-            Node* outcome_12 = outcomeNodes->at(1);
-            Node* outcome_22 = outcomeNodes->at(2);
+            AssignOutcomesForRerolls(node, outcomeNodes);
+            nodeCount += 3; 
 
-            //TODO: Assign each of the reroll nodes to the correct outcome node
-            // getting 11
-            // 1) dice is 11, no rerolls
-            // 2) dice is 11, one reroll (either reroll one or two)
-            // 3) dice is 21, reroll second
-            // 4) dice is 12, reroll one
-            // 3) All of the both rerolls (11, 12, 22)
-
-            // getting 12
-            // 1) dice is 11, one reroll
-            // 2) dice is 12, no rerolls
-            // 3) dice is 12, reroll one or reroll two
-            // 4) dice is 22, one reroll
-            // 5) all of the both rerolls 
-
-            // getting 22
-            // 1) dice is 22, no rerolls
-            // 2) dice is 22, one reroll
-            // 2) dice is 21, reroll second
-            // 3) dice is 12, reroll one
-            // 3) All of the both rerolls (11, 12, 22)
-
-
-         
+            for (Node* outcome: *outcomeNodes)
+            {
+                 // Recursively make children
+                generateNodeTree(outcome, depth - 1);
+            }
         }
         
-        Node* child = new Node(node->getType());
-        node->addChild(child);
-        // Here we count how many nodes there are
-        ++nodeCount;
+        else
+        {
+            Node* child = new Node(node->getType());
+            node->addChild(child);
+            // Here we count how many nodes there are
+            ++nodeCount;
 
-        if(node->getType() == Node::NodeType::ROOT_NODE)
-            AssignDiceValues(node);
+            if(node->getType() == Node::NodeType::ROOT_NODE)
+                AssignDiceValues(node);
+            
+            //Assigning Reroll decisions for the Reroll nodes (i.e., Children of Dice Nodes)
+            if(node->getType() == Node::NodeType::DICE_NODE)
+                AssignRerollDecisions(node);
+
+            // Recursively make children
+            generateNodeTree(child, depth - 1);
+        }
         
-        if(node->getType() == Node::NodeType::DICE_NODE)
-            AssignRerollDecisions(node);
-
-        // Recursively make children
-        generateNodeTree(child, depth - 1);
     }
 }
 
-void printGraphvizNodeTree(const Node* node, Agraph_t* graph, Agnode_t* parentAgNode, int depth, int siblingIndex, int maxSiblings) 
+void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, int depth, int siblingIndex, int maxSiblings) 
 {
     static const std::string TYPE_STRINGS[] = {
         "root",
@@ -117,7 +106,8 @@ void printGraphvizNodeTree(const Node* node, Agraph_t* graph, Agnode_t* parentAg
     }
 
     int childIndex = 0;
-    for (const auto& child : node->getChildren()) {
+    auto pChildren = node->getChildren();
+    for (const auto child : *pChildren) {
         // This is the recursive part
         printGraphvizNodeTree(child, graph, currentNode, depth + 1, childIndex, maxSiblings);
         ++childIndex;
@@ -154,7 +144,7 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
     gvFreeContext(gvc);
 }
 
-void generateChildrenCount(Node* node)
+void generateChildrenCount(Node* node, int depth)
 {
     if (node->getType() == Node::ROOT_NODE || node->getType() == Node::SCORE_ROOT_NODE) {
         // There are three children. Throwing 1 and 1, (throwing 1 and 2 AND throwing 2 and 1), and finally throwing 2 and 2
@@ -253,6 +243,50 @@ void AssignRerollDecisions(Node* node)
         }
     }
 }
+
+void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes)
+{
+    Node* outcome_11 = outcomeNodes->at(0);
+    Node* outcome_12 = outcomeNodes->at(1);
+    Node* outcome_22 = outcomeNodes->at(2);
+    //TODO: Assign each of the reroll nodes to the correct outcome node
+    // Matching to 11
+    // 1) dice is 11, no rerolls
+    // 2) dice is 11, one reroll (either reroll one or two)
+    // 3) dice is 21, reroll second
+    // 4) dice is 12, reroll one
+    // 3) All of the both rerolls (11, 12, 22)
+    if (node->firstDice == 1 && node->secondDice == 1)
+    {
+        node->addChild(outcome_11);
+        if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE)
+            node->addChild(outcome_12);
+    }
+        
+    else if (node->firstDice == 1 && node->secondDice == 2)
+    {
+         node->addChild(outcome_12);
+        if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE)
+            node->addChild(outcome_22);
+        if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO)
+            node->addChild(outcome_11);
+    }
+    else if (node->firstDice == 2 && node->secondDice == 2)
+    {
+        node->addChild(outcome_22);
+        if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO)
+             node->addChild(outcome_12);
+    }
+    
+    //if reroll decision is to reroll both, all three outcomes are available
+    if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_BOTH)
+    {
+        node->addChild(outcome_11);
+        node->addChild(outcome_12);
+        node->addChild(outcome_22);
+    }
+}
+
 
 int main() {
     srand(static_cast<unsigned>(time(NULL)));

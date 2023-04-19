@@ -1,5 +1,6 @@
 #pragma once
 #include <vector> 
+#include <algorithm>
 
 class Node {
 public:
@@ -47,6 +48,11 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
         type = NodeType;
     }
 
+    void setDiceValues(int val1, int val2)
+    {
+        firstDice = val1;
+        secondDice = val2;
+    }
 
     std::vector<Node*>* getParent() const {
         return parent;
@@ -64,16 +70,28 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
     void setParent(Node* newParent) {
         if (parent == nullptr)
             parent = new std::vector<Node*>();
-
-        parent->push_back(newParent);
+        
+        //only add the newParent if it is not already a parent of the current node
+        if (std::find(parent->begin(), parent->end(), newParent) == parent->end() )
+            parent->push_back(newParent);
     }
 
     void addChild(Node* child) {
+        if (children == nullptr)
+            children = new std::vector<Node*>();
+
         // set the child node type based on the current node type
         if (type == Node::NodeType::ROOT_NODE || type == Node::NodeType::SCORE_ROOT_NODE)
             child->setType(Node::NodeType::DICE_NODE);
         else if (type == Node::NodeType::DICE_NODE)
+        {
+            // if current node is dice node, assign dice values to the child nodes
+            // This will simplify the process of deciding the children of reroll nodes (outcomes)
             child->setType(Node::NodeType::REROLL_CHOICE_NODE);
+            // Assign the dice values from the current node to its child node
+            child->setDiceValues(firstDice, secondDice);
+        }
+            
         else if (type == Node::NodeType::REROLL_CHOICE_NODE)
             child->setType(Node::NodeType::OUTCOME_NODE);
         else if (type == Node::NodeType::OUTCOME_NODE)
@@ -90,7 +108,7 @@ Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<
         return numChildren;
     }
 
-    int setChildrenCount(int count)
+    void setChildrenCount(int count)
     {
         numChildren = count;
     }
