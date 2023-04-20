@@ -4,6 +4,8 @@
 
 class Node {
 public:
+    bool childHandled;
+
     enum NodeType {
         ROOT_NODE,
         DICE_NODE,
@@ -32,8 +34,8 @@ public:
 
     // Constructor
     // Constructor overloading, in the case of a reroll node being implemented
-    Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<Node*>* scoreOptions = nullptr, std::vector<Node*>* children = nullptr, REROLL_TYPE reroll_decision = REROLL_NA)
-    : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0), children(children), scoreOptions(scoreOptions) {
+    Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<Node*>* scoreOptions = nullptr, std::vector<Node*>* children = nullptr, bool childHandled = false, REROLL_TYPE reroll_decision = REROLL_NA)
+    : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0), children(children), scoreOptions(scoreOptions), childHandled(childHandled) {
 
 
     }

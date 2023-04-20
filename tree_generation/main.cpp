@@ -54,12 +54,10 @@ void generateNodeTree(Node* node, int depth) {
                 for (Node* outcome: *(node->getChildren()))
                 {
                     // Recursively make children
-                    //if (outcome != nullptr) {
-                    //    if (!(outcome->isChildVisited())) {
-                    //        outcome->setChildVisited();
-                            generateNodeTree(outcome, depth - 1);
-                    //    }
-                    //}
+                    if (!(outcome->childHandled)) {
+                        outcome->childHandled = true;
+                        generateNodeTree(outcome, depth - 1);
+                    }
                 }
             }
             
