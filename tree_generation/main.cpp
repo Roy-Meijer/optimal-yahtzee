@@ -91,18 +91,20 @@ void generateNodeTree(Node* node, int depth) {
 void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, int depth, int siblingIndex, int maxSiblings) 
 {
     static const std::string TYPE_STRINGS[] = {
-        "root",
-        "dice",
-        "reroll",
-        "outcome",
-        "ScoreRoot",
+        "root banana",
+        "dice banana",
+        "reroll banana",
+        "outcome banana",
+        "ScoreRoot banana",
+        "nodeerror banana"
     };
     static const std::string COLORS[] = {
         "red",
         "green",
         "blue",
         "purple",
-        "brown"
+        "brown",
+        "orange"
     };
 
     static const std::string TYPE_REROLL[] = {
