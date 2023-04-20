@@ -9,7 +9,8 @@ public:
         DICE_NODE,
         REROLL_CHOICE_NODE,
         OUTCOME_NODE, //outcomes are (1,1), (2,1)/(1,2), (2,2)
-        SCORE_ROOT_NODE
+        SCORE_ROOT_NODE,
+        NODE_ERROR
     };
 
     // Not yet implemented
@@ -26,8 +27,8 @@ public:
 
     // The two possible dice rolls. Make it public to not have to deal with getters and setters
     // Two ints instead of array so I don't have to deal with array pointers and stuff
-    int firstDice = {-1};
-    int secondDice = {-1};
+    int firstDice = -1;
+    int secondDice = -1;
 
     // Constructor
     // Constructor overloading, in the case of a reroll node being implemented
@@ -38,17 +39,24 @@ public:
     }
 
     // Destructor
-    virtual ~Node() {
-        for (auto child : *children) {
-            delete child;
+    virtual ~Node() 
+    {
+        if (children != nullptr) { // added a check to prevent null pointer exception
+            for (auto child : *children) {
+                delete child;
+            }
+            delete children; // added to avoid memory leak
         }
+        delete scoreOptions; // added to avoid memory leak
     }
 
-    NodeType getType() const {
+    NodeType getType()  
+    {
         return type;
     }
     
-    void setType(Node::NodeType NodeType)  {
+    void setType(Node::NodeType NodeType)  
+    {
         type = NodeType;
     }
 
@@ -58,11 +66,13 @@ public:
         secondDice = val2;
     }
 
-    std::vector<Node*>* getParent() const {
+    std::vector<Node*>* getParent()  
+    {
         return parent;
     }
 
-    REROLL_TYPE getRerollDecision() const {
+    REROLL_TYPE getRerollDecision()  
+    {
         return reroll_decision;
     }
 
@@ -72,41 +82,67 @@ public:
         node->reroll_decision = reroll_dec;
     }
 
-    void setParent(Node* newParent) {
-        if (parent == nullptr) {
+    void setParent(Node* newParent) 
+    {   
+        // If there is no parent yet, we add the parent
+        if (parent == nullptr) 
+        {
             parent = new std::vector<Node*>();
+            parent->push_back(newParent);
         }
         
-        //only add the newParent if it is not already a parent of the current node
-        if (std::find(parent->begin(), parent->end(), newParent) == parent->end() ) {
-            parent->push_back(newParent);
+        // ONLY OUTCOME nodes can have multiple parents, and the parent is not already a parent of the node
+        if (parent != nullptr && this->getType() == Node::NodeType::OUTCOME_NODE)
+        {
+            //only add the newParent if it is not already a parent of the current node
+            if (std::find(parent->begin(), parent->end(), newParent) == parent->end() ) 
+            {
+                parent->push_back(newParent);
+            }
         }
     }
 
-    void addChild(Node* child) {
-        if (children == nullptr) {
+    // get the type of the children nodes of the current node
+    Node::NodeType getChildType()
+    {
+        // set the child node type based on the current node type
+        if (this->getType() == Node::NodeType::ROOT_NODE || this->getType() == Node::NodeType::SCORE_ROOT_NODE) 
+            return Node::NodeType::DICE_NODE;
+        else if (this->getType() == Node::NodeType::DICE_NODE) 
+            return Node::NodeType::REROLL_CHOICE_NODE;
+        else if (this->getType() == Node::NodeType::REROLL_CHOICE_NODE) 
+            return Node::NodeType::OUTCOME_NODE;
+        else if (this->getType() == Node::NodeType::OUTCOME_NODE) 
+            return Node::NodeType::SCORE_ROOT_NODE;
+        else
+        {
+            std::cerr << "Error: undefined node type\n";
+            return Node::NodeType::NODE_ERROR;
+        }       
+    }
+
+    void addChild(Node* child, int& nodeCount) 
+    {
+        if (children == nullptr) 
+        {
             children = new std::vector<Node*>();
         }
+       
+        // only add the child if it does not exist 
+        if (std::find(children->begin(), children->end(), child) == children->end() ) 
+        {
+            children->push_back(child);
+            nodeCount++;
 
-        // set the child node type based on the current node type
-        if (type == Node::NodeType::ROOT_NODE || type == Node::NodeType::SCORE_ROOT_NODE) {
-            child->setType(Node::NodeType::DICE_NODE);
-        } else if (type == Node::NodeType::DICE_NODE) {
-            // if current node is dice node, assign dice values to the child nodes
-            // This will simplify the process of deciding the children of reroll nodes (outcomes)
-            child->setType(Node::NodeType::REROLL_CHOICE_NODE);
-            // Assign the dice values from the current node to its child node
-            child->setDiceValues(firstDice, secondDice);
-        } else if (type == Node::NodeType::REROLL_CHOICE_NODE) {
-            child->setType(Node::NodeType::OUTCOME_NODE);
-        } else if (type == Node::NodeType::OUTCOME_NODE) {
-            child->setType(Node::NodeType::SCORE_ROOT_NODE);
-        } else {
-            std::cerr << "Error: undefined node type\n"; 
+            if (this->getType() == Node::NodeType::DICE_NODE) 
+            {
+                // if current node is dice node, assign dice values to the child nodes (reroll nodes)
+                // This will simplify the process of deciding the children of reroll nodes (outcomes)
+                child->setDiceValues(firstDice, secondDice);
+            }
         }
-        
-        children->push_back(child);
         child->setParent(this);
+        
     }
 
     int getChildrenCount()
@@ -119,7 +155,8 @@ public:
         numChildren = count;
     }
 
-    std::vector<Node*>* getChildren() {
+    std::vector<Node*>* getChildren() 
+    {
         return children;
     }
 
