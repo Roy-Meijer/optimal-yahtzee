@@ -32,7 +32,10 @@ public:
     // Constructor
     // Constructor overloading, in the case of a reroll node being implemented
     Node(NodeType type = DICE_NODE, std::vector<Node*>* parent=nullptr, std::vector<Node*>* scoreOptions = nullptr, std::vector<Node*>* children = nullptr, REROLL_TYPE reroll_decision = REROLL_NA)
-    : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0), children(children), scoreOptions(scoreOptions) {}
+    : type(type), reroll_decision(reroll_decision), parent(parent), maxExpectedScore(-1.0), numChildren(0), children(children), scoreOptions(scoreOptions) {
+
+
+    }
 
     // Destructor
     virtual ~Node() {
@@ -63,9 +66,10 @@ public:
         return reroll_decision;
     }
 
+    //Can set children node reroll decision, so keep the node as an input parameter
     void setRerollDecision(Node* node, Node::REROLL_TYPE reroll_dec)
     {
-        reroll_decision = reroll_dec;
+        node->reroll_decision = reroll_dec;
     }
 
     void setParent(Node* newParent) {
@@ -119,13 +123,14 @@ public:
         return children;
     }
 
-    // Can be called only from a root node
-    std::vector<Node*>* generateOutcomeNodes(Node* node)
+    // Should be called only from a root node
+    std::vector<Node*>* generateOutcomeNodes(Node* node, int& nodeCount)
     {
-        if (scoreOptions == nullptr)
+        assert (node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE);
+        if (node->scoreOptions == nullptr)
         {
-            scoreOptions = new std::vector<Node*>();
-            if (node->getType() == Node::NodeType::ROOT_NODE)
+            node->scoreOptions = new std::vector<Node*>();
+            if (node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE)
             {
                 // Generate three nodes
                 Node* score_11 = new Node(Node::OUTCOME_NODE);
@@ -136,15 +141,17 @@ public:
                 score_12->setDiceValues(1,2);
                 score_22->setDiceValues(2,2);
 
-                std::cout << "scoreOptions: " << scoreOptions << "->push_back(" << score_11 << ")\n";
+                std::cout << "scoreOptions: " << node->scoreOptions << "->push_back(" << score_11 << ")\n";
 
                 std::cout << "scoreOptions Values are: (" << score_11->firstDice << "," << score_11->secondDice << ")\n";
-                scoreOptions->push_back(score_11);
-                scoreOptions->push_back(score_12);
-                scoreOptions->push_back(score_22);
+                node->scoreOptions->push_back(score_11);
+                node->scoreOptions->push_back(score_12);
+                node->scoreOptions->push_back(score_22);
+
+                nodeCount += 3;
             }
         }
-        return scoreOptions;
+        return node->scoreOptions;
     }
     
 
