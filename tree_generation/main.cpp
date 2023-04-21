@@ -19,25 +19,11 @@ void AssignDiceValues(Node* node, int childIndex);
 void generateChildrenCount(Node* node, int depth);
 
 void generateNodeTree(Node* node, int depth) {
-    // Break if we have reached the necessary depth
+    //Base case:  Break if we have reached the necessary depth
     if (depth == 0) {
         return;
     }
-
-    if (depth == 5)
-    {
-        if (node->getChildren() != nullptr) {
-            std::cout << "Children: ";
-            for (Node* child: *(node->getChildren()))
-            {
-                // Recursively make children
-                std::cout << (child) << " ";
-            }
-            std::cout << "\n";
-        }
-    }
-        
-
+      
     generateChildrenCount(node, depth);
 
     // Generating the children
@@ -48,7 +34,6 @@ void generateNodeTree(Node* node, int depth) {
         {   
             Node* rootNode = node->getParent()->front()->getParent()->front();
             std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode);
-            //std::cout << "rootNode: " << rootNode << "\n";
             
             AssignOutcomesForRerolls(node, outcomeNodes);
 
@@ -74,13 +59,12 @@ void generateNodeTree(Node* node, int depth) {
             if(node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE)
             {
                 std::vector<Node*>* outcomeNodes = node->generateOutcomeNodes(node);
-                //std::cout << "First outcomeNode: " << outcomeNodes->front()->firstDice  << ", " << outcomeNodes->front()->secondDice << "\n";
-                
+   
                 AssignDiceValues(node, i);
             }
                 
             
-            //Assigning Reroll decisions for the Reroll nodes (i.e., Children of Dice Nodes)
+            // Assigning Reroll decisions for the Reroll nodes (i.e., Children of Dice Nodes)
             if(node->getType() == Node::NodeType::DICE_NODE)
                 AssignRerollDecisions(node, i);
 
@@ -302,13 +286,7 @@ void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes)
     Node* outcome_11 = outcomeNodes->at(0);
     Node* outcome_12 = outcomeNodes->at(1);
     Node* outcome_22 = outcomeNodes->at(2);
-    //TODO: Assign each of the reroll nodes to the correct outcome node
-    // Matching to 11
-    // 1) dice is 11, no rerolls
-    // 2) dice is 11, one reroll (either reroll one or two)
-    // 3) dice is 21, reroll second
-    // 4) dice is 12, reroll one
-    // 3) All of the both rerolls (11, 12, 22)
+    
     if (node->firstDice == 1 && node->secondDice == 1)
     {
         node->addChild(outcome_11);
@@ -340,27 +318,6 @@ void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes)
     }
 }
 
-//not used
-
-/*
-void printNodeTree(Node* node, int depth = 0) {
-    static const std::string INDENT_STRING = "  ";
-    static const std::string TYPE_STRINGS[] = {
-        "roll",
-        "dice",
-        "reroll",
-        "redice"
-    };
-
-    std::cout << std::string(depth * INDENT_STRING.size(), ' ')
-              << std::string(TYPE_STRINGS[node->getType().c_str()]) << " (" << depth << ")" << std::endl;
-
-    for (auto& child : node->getChildren()) {
-        printNodeTree(child, depth + 1);
-    }
-}
-*/
-
 
 int main() {
     srand(static_cast<unsigned>(time(NULL)));
@@ -375,8 +332,6 @@ int main() {
         rootNode = new Node(Node::ROOT_NODE);
         generateNodeTree(rootNode, NR_OF_ROUNDS*4 );
 
-       // Node* testNode = rootNode->getChildren()->begin()->getChildren()->begin()->getChildren();
-       //Node* testNode = rootNode->getChildren()->begin()->getChildren()->begin()->getChildren();
     }
     
     // Save as tree.svg (picture which you can open with your internet browser)

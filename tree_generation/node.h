@@ -134,7 +134,6 @@ public:
         if (std::find(children->begin(), children->end(), child) == children->end() ) 
         {
             children->push_back(child);
-            //nodeCount++;
 
             if (this->getType() == Node::NodeType::DICE_NODE) 
             {
@@ -188,8 +187,6 @@ public:
                 node->scoreOptions->push_back(score_11);
                 node->scoreOptions->push_back(score_12);
                 node->scoreOptions->push_back(score_22);
-
-                //nodeCount += 3;
             }
         }
         return node->scoreOptions;
