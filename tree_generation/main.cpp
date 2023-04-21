@@ -170,7 +170,8 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
     }
 
     agattr(graph, AGRAPH, (char *)"rankdir", (char *)"LR");  // print from left to right
-    agattr(graph, AGRAPH, (char *)"nodesep", (char *)"1.5"); // increase the nodesep attribute
+    agattr(graph, AGRAPH, (char *)"nodesep", (char *)"0.0"); // increase the nodesep attribute
+    agattr(graph, AGRAPH, (char *)"overlap", (char *)"false"); // increase the nodesep attribute
     gvLayout(gvc, graph, "dot"); // Use "dot" or "neato", more options: https://graphviz.org/docs/layouts/
 
     // Save to 'graphs' folder:
