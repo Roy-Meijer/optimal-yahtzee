@@ -123,7 +123,7 @@ public:
         }       
     }
 
-    void addChild(Node* child, int& nodeCount) 
+    void addChild(Node* child) 
     {
         if (children == nullptr) 
         {
@@ -134,7 +134,7 @@ public:
         if (std::find(children->begin(), children->end(), child) == children->end() ) 
         {
             children->push_back(child);
-            nodeCount++;
+            //nodeCount++;
 
             if (this->getType() == Node::NodeType::DICE_NODE) 
             {
@@ -159,11 +159,13 @@ public:
 
     std::vector<Node*>* getChildren() 
     {
+        if (children == nullptr);
+            //std::cerr << "Accessing nullptr, Node " << this->getType() << ", pointer address: " << this << "has no children \n" ;
         return children;
     }
 
     // Should be called only from a root node
-    std::vector<Node*>* generateOutcomeNodes(Node* node, int& nodeCount)
+    std::vector<Node*>* generateOutcomeNodes(Node* node)
     {
         assert (node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE);
         if (node->scoreOptions == nullptr)
@@ -180,14 +182,14 @@ public:
                 score_12->setDiceValues(1,2);
                 score_22->setDiceValues(2,2);
 
-                std::cout << "scoreOptions: " << node->scoreOptions << "->push_back(" << score_11 << ")\n";
+                //std::cout << "scoreOptions: " << node->scoreOptions << "->push_back(" << score_11 << ")\n";
 
-                std::cout << "scoreOptions Values are: (" << score_11->firstDice << "," << score_11->secondDice << ")\n";
+                //std::cout << "scoreOptions Values are: (" << score_11->firstDice << "," << score_11->secondDice << ")\n";
                 node->scoreOptions->push_back(score_11);
                 node->scoreOptions->push_back(score_12);
                 node->scoreOptions->push_back(score_22);
 
-                nodeCount += 3;
+                //nodeCount += 3;
             }
         }
         return node->scoreOptions;

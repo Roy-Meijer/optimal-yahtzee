@@ -10,7 +10,10 @@
 #define NR_OF_ROUNDS 2
 
 int nodeCount = 0;
-void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes, int& nodeCount); 
+
+std::vector<Agnode_t*>* nodeCountVector = new std::vector<Agnode_t*>();
+
+void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes); 
 void AssignRerollDecisions(Node* node, int childIndex);
 void AssignDiceValues(Node* node, int childIndex);
 void generateChildrenCount(Node* node, int depth);
@@ -44,10 +47,10 @@ void generateNodeTree(Node* node, int depth) {
         if (node->getType() == Node::REROLL_CHOICE_NODE)
         {   
             Node* rootNode = node->getParent()->front()->getParent()->front();
-            std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode, nodeCount);
+            std::vector<Node*>* outcomeNodes = rootNode->generateOutcomeNodes(rootNode);
             //std::cout << "rootNode: " << rootNode << "\n";
             
-            AssignOutcomesForRerolls(node, outcomeNodes, nodeCount);
+            AssignOutcomesForRerolls(node, outcomeNodes);
 
             if (node->getChildren() != nullptr)
             {
@@ -66,12 +69,12 @@ void generateNodeTree(Node* node, int depth) {
         else
         {
             Node* child = new Node(node->getChildType());
-            node->addChild(child, nodeCount);
+            node->addChild(child);
 
             if(node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE)
             {
-                std::vector<Node*>* outcomeNodes = node->generateOutcomeNodes(node, nodeCount);
-                std::cout << "First outcomeNode: " << outcomeNodes->front()->firstDice  << ", " << outcomeNodes->front()->secondDice << "\n";
+                std::vector<Node*>* outcomeNodes = node->generateOutcomeNodes(node);
+                //std::cout << "First outcomeNode: " << outcomeNodes->front()->firstDice  << ", " << outcomeNodes->front()->secondDice << "\n";
                 
                 AssignDiceValues(node, i);
             }
@@ -88,15 +91,20 @@ void generateNodeTree(Node* node, int depth) {
     }
 }
 
+bool edgeExists(Agraph_t* graph, Agnode_t* node1, Agnode_t* node2) {
+    Agedge_t* edge = agfindedge(graph, node1, node2);
+    return edge != nullptr;
+}
+
 void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, int depth, int siblingIndex, int maxSiblings) 
 {
     static const std::string TYPE_STRINGS[] = {
-        "root banana",
-        "dice banana",
-        "reroll banana",
-        "outcome banana",
-        "ScoreRoot banana",
-        "nodeerror banana"
+        "root",
+        "dice",
+        "reroll",
+        "outcome",
+        "ScoreRoot",
+        "_"
     };
     static const std::string COLORS[] = {
         "red",
@@ -112,10 +120,11 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         "reroll single one",
         "reroll single two",
         "reroll both",
-        "reroll N/A"
+        "_"
     };
 
-    if (siblingIndex >= maxSiblings) {
+    if (siblingIndex >= maxSiblings) 
+    {
         if (siblingIndex == maxSiblings) {
            std::string nodeName = "ellipsis_" + std::to_string(depth) + "_" + std::to_string(reinterpret_cast<uintptr_t>(node));
             Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
@@ -126,23 +135,36 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         return;
     }
 
+    
+
     std::string nodeName = TYPE_STRINGS[node->getType()] + "_" + TYPE_REROLL[node->getRerollDecision()] + "_" +  std::to_string(reinterpret_cast<uintptr_t>(node));
     Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
-    agsafeset(currentNode, const_cast<char*>("coloruiyj"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
+    agsafeset(currentNode, const_cast<char*>("color"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
+    
+    if (std::find(nodeCountVector->begin(), nodeCountVector->end(), currentNode) == nodeCountVector->end() ) 
+    {
+        nodeCountVector->push_back(currentNode);
+        nodeCount++;
+    }
 
-    if (parentAgNode) {
-        agedge(graph, parentAgNode, currentNode, nullptr, 1);
+    if (parentAgNode) 
+    {
+        if (!edgeExists(graph, parentAgNode, currentNode)) 
+        {
+            //nodeCount++;
+            agedge(graph, parentAgNode, currentNode, nullptr, 1);
+        }
     }
 
     if (node->getChildren() != nullptr) 
     {
         int childIndex = 0;
-        std::vector<Node*>::iterator iterChildren = node->getChildren()->begin();
-        for (; iterChildren != node->getChildren()->end(); ++iterChildren) 
-        {
-            // This is the recursive part
-            printGraphvizNodeTree(*iterChildren, graph, currentNode, depth + 1, childIndex, maxSiblings);
-            ++childIndex;
+        for (auto Childnode : (*node->getChildren())) {
+            if (Childnode != nullptr && currentNode != nullptr) {
+                 // This is the recursive part
+                printGraphvizNodeTree(Childnode, graph, currentNode, depth + 1, 0, maxSiblings);
+                ++childIndex;
+            }
         }
     }
 }
@@ -275,7 +297,7 @@ void AssignRerollDecisions(Node* node, int childIndex)
     }
 }
 
-void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes, int& nodeCount)
+void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes)
 {
     Node* outcome_11 = outcomeNodes->at(0);
     Node* outcome_12 = outcomeNodes->at(1);
@@ -289,32 +311,32 @@ void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes, int&
     // 3) All of the both rerolls (11, 12, 22)
     if (node->firstDice == 1 && node->secondDice == 1)
     {
-        node->addChild(outcome_11, nodeCount);
+        node->addChild(outcome_11);
         if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE)
-            node->addChild(outcome_12, nodeCount);
+            node->addChild(outcome_12);
     }
         
     else if (node->firstDice == 1 && node->secondDice == 2)
     {
-         node->addChild(outcome_12, nodeCount);
+         node->addChild(outcome_12);
         if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE)
-            node->addChild(outcome_22, nodeCount);
+            node->addChild(outcome_22);
         if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO)
-            node->addChild(outcome_11, nodeCount);
+            node->addChild(outcome_11);
     }
     else if (node->firstDice == 2 && node->secondDice == 2)
     {
-        node->addChild(outcome_22, nodeCount);
+        node->addChild(outcome_22);
         if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO)
-             node->addChild(outcome_12, nodeCount);
+             node->addChild(outcome_12);
     }
     
     //if reroll decision is to reroll both, all three outcomes are available
     if (node->getRerollDecision() == Node::REROLL_TYPE::REROLL_BOTH)
     {
-        node->addChild(outcome_11, nodeCount);
-        node->addChild(outcome_12, nodeCount);
-        node->addChild(outcome_22, nodeCount);
+        node->addChild(outcome_11);
+        node->addChild(outcome_12);
+        node->addChild(outcome_22);
     }
 }
 
@@ -347,17 +369,16 @@ int main() {
 
     // Make the root node (start of round 1)
     std::vector<Node*> rootNodes(1);
-    // (don't forget to count it)
-    ++nodeCount;
 
-     // Generate tree of two rounds (each round has 4 levels of nodes)
+    // Generate tree of two rounds (each round has 4 levels of nodes)
     for (auto& rootNode : rootNodes) {
         rootNode = new Node(Node::ROOT_NODE);
         generateNodeTree(rootNode, NR_OF_ROUNDS*4 );
+
+       // Node* testNode = rootNode->getChildren()->begin()->getChildren()->begin()->getChildren();
+       //Node* testNode = rootNode->getChildren()->begin()->getChildren()->begin()->getChildren();
     }
-
-    std::cout << "In total, there are " << nodeCount << " nodes.\n";
-
+    
     // Save as tree.svg (picture which you can open with your internet browser)
     std::string outputFilename = "tree";
     std::string outputFiletype = "svg"; //you can also change this to png
@@ -367,6 +388,7 @@ int main() {
     int maxSiblings = 100; 
     // Generate tree figure
     printTreeAsGraph(rootNodes, outputFilename, outputFiletype, maxSiblings); 
+    std::cout << "In total, there are " << nodeCount << " nodes.\n";
 
     // Delete tree
     for (auto& rootNode : rootNodes) {
