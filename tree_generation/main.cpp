@@ -265,11 +265,11 @@ void AssignRerollDecisions(Node* node, int childIndex)
     }
     // if there are 3 child nodes, the second will be reroll one dice
     // if there are 4 child nodes, the second and the third will be roll one dice
-    else if ((childIndex == 1 && node->getChildrenCount() == 4) || (children->at(childIndex)->firstDice == children->at(childIndex)->secondDice && children->at(childIndex)->firstDice == 1))    // i.e., the children dice values are (1,2), or second branch at 1,1
+    else if ((childIndex == 1 && node->getChildrenCount() == 4) || (node->firstDice == node->secondDice && node->firstDice == 1 && childIndex == 1))    // i.e., the children dice values are (1,2), or second branch at 1,1
     {
         node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE);
     }
-    else if (childIndex == 2 && node->getChildrenCount() == 4 || (children->at(childIndex)->firstDice == children->at(childIndex)->secondDice && children->at(childIndex)->firstDice == 2))    // i.e., the children dice values are (2,1), or second branch at 2,2
+    else if (childIndex == 2 && node->getChildrenCount() == 4 || (node->firstDice == node->secondDice && node->firstDice == 2 && childIndex == 1))    // i.e., the children dice values are (2,1), or second branch at 2,2
     {
         node->setRerollDecision(children->at(childIndex), Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO);
     }

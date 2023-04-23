@@ -75,7 +75,7 @@ public:
 
     REROLL_TYPE getRerollDecision()  
     {
-        return reroll_decision;
+        return this->reroll_decision;
     }
 
     //Can set children node reroll decision, so keep the node as an input parameter
