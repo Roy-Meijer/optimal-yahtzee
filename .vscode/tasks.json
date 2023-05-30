@@ -7,9 +7,12 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
+                "-LC:\\msys64\\mingw64\\lib",
                 "${file}",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "-lgvc",
+                "-lcgraph"
             ],
             "options": {
                 "cwd": "${fileDirname}"
