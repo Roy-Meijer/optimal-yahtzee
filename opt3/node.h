@@ -168,6 +168,7 @@ public:
         return children;
     }
 
+    
     // Should be called only from a root node
     std::vector<Node*>* generateOutcomeNodes(Node* node)
     {

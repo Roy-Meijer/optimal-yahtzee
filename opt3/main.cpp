@@ -11,11 +11,25 @@
 #include "rapidcsv.h"
 
 #include <conio.h>
+#include <sstream> 
 
 
 
 #define USE_GENERATED_RESULTS
+#undef TREE_RESULT_COLORS 5
 #undef GENERATE_RESULTS
+
+#ifdef TREE_RESULT_COLORS
+std::vector<double> root_color;
+std::vector<double> dice_1_color;
+std::vector<double> rr_choice_1_color;
+std::vector<double> outcome_1_color;
+std::vector<double> score_1_color;
+std::vector<double> dice_2_color;
+std::vector<double> rr_choice_2_color;
+std::vector<double> outcome_2_color;
+std::vector<double> score_2_color;
+#endif
 
 
 #define NR_OF_ROUNDS 2
@@ -29,6 +43,8 @@ void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes);
 Node * AssignRerollDecisions(Node* node, int childIndex, Node* child);
 void AssignDiceValues(Node* node, int childIndex);
 void generateChildrenCount(Node* node, int depth);
+
+std::vector<Node*>* finalScoreNodes = new std::vector<Node*>();
 
 void generateNodeTree(Node* node, int depth) {
     //Base case:  Break if we have reached the necessary depth
@@ -67,7 +83,7 @@ void generateNodeTree(Node* node, int depth) {
         {
             Node* child;
             if (node->getType() == Node::OUTCOME_NODE) {
-                if (node->getChildrenCount() == 2) { //first round
+                if (depth > 4) { //first round
                     if (i == 0) { //score in ones
                         int scoreOnes = 1 * ((node->firstDice == 1) + (node->secondDice == 1));
                         child = new Node(node->getChildType(), scoreOnes, node->getScoreTwos());
@@ -76,12 +92,19 @@ void generateNodeTree(Node* node, int depth) {
                         child = new Node(node->getChildType(), node->getScoreOnes(), scoreTwos);
                     }
                 } else { //second round
-                    if (node->getScoreOnes() == -1) { //score in ones
-                        int scoreOnes = 1 * ((node->firstDice == 1) + (node->secondDice == 1));
-                        child = new Node(node->getChildType(), scoreOnes, node->getScoreTwos());
-                    } else  { //score in twos
-                        int scoreTwos = 2 * ((node->firstDice == 2) + (node->secondDice == 2));
-                        child = new Node(node->getChildType(), node->getScoreOnes(), scoreTwos);
+                    int scoreOnes = (node->getScoreOnes() == -1 ? 1 * ((node->firstDice == 1) + (node->secondDice == 1)) : node->getScoreOnes());
+                    int scoreTwos = (node->getScoreTwos() == -1 ? 2 * ((node->firstDice == 2) + (node->secondDice == 2)) : node->getScoreTwos());
+                    bool finalScoreNodeExists = false;
+                    for (Node* finalScoreNode : *finalScoreNodes) { //seach in vector of final score nodes
+                        if (finalScoreNode->getScoreOnes() == scoreOnes && finalScoreNode->getScoreTwos() == scoreTwos) { //if there is a node with the same score
+                            child = finalScoreNode; //add this node as child
+                            finalScoreNodeExists = true;
+                            break;
+                        }
+                    }
+                    if (finalScoreNodeExists == false) { //if there is no node with this score
+                        child = new Node(node->getChildType(), scoreOnes, scoreTwos); //make a new child
+                        finalScoreNodes->push_back(child); //add this node to all final score nodes
                     }
                 }
                 node->addChild(child);
@@ -90,7 +113,7 @@ void generateNodeTree(Node* node, int depth) {
                 //child = new Node(node->getChildType(), node->getScoreOnes(), node->getScoreTwos());
                 //node->addChild(child);
                 child = AssignRerollDecisions(node, i, child);
-            } else if(node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE) {
+            } else if (node->getType() == Node::NodeType::ROOT_NODE || node->getType() == Node::NodeType::SCORE_ROOT_NODE) {
                 child = new Node(node->getChildType(), node->getScoreOnes(), node->getScoreTwos());
                 node->addChild(child);
                 AssignDiceValues(node, i);
@@ -105,6 +128,53 @@ void generateNodeTree(Node* node, int depth) {
         
     }
 }
+
+typedef struct {
+    int r, g, b;
+} Color;
+
+#ifdef TREE_RESULT_COLORS
+std::string generateColorGradient(double value) {
+
+    double x0 = 0.0;
+    double x1 = 1.0;
+    Color y0 = {255, 255, 255};  // R, G, B values at X = 0.0
+    Color y1 = {60, 255, 60};  // R, G, B values at X = 1.0
+    
+    // Clamp the value between 0.0 and 1.0
+    value = std::max(x0, std::min(x1, value));
+
+    // Calculate the RGB components based on the exponential value
+    int red, green, blue;
+
+    if (value == 0.0) {
+        red = green = blue = 200;
+    } else if (value == 1.0) {
+        red = 98;
+        green = 176;
+        blue = 255;
+    } else {
+        red = (int)(y0.r + (y1.r - y0.r) * (value - x0) / (x1 - x0));
+        green = (int)(y0.g + (y1.g - y0.g) * (value - x0) / (x1 - x0));
+        blue = (int)(y0.b + (y1.b - y0.b) * (value - x0) / (x1 - x0));
+    }
+
+    // Convert the RGB values to a hexadecimal color string
+    std::stringstream ss;
+    ss << "#" << std::hex << std::setw(2) << std::setfill('0') << red
+       << std::hex << std::setw(2) << std::setfill('0') << green
+       << std::hex << std::setw(2) << std::setfill('0') << blue;
+
+    return ss.str();
+}
+#endif
+
+
+//static std::string colorToString(int color) {
+//    std::stringstream ss;
+//    ss << "#" << std::hex << std::setw(6) << std::setfill('0') << (color & 0xFFFFFF);
+//    return ss.str();
+//}
 
 bool edgeExists(Agraph_t* graph, Agnode_t* node1, Agnode_t* node2) {
     Agedge_t* edge = agfindedge(graph, node1, node2);
@@ -121,6 +191,7 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         "score",
         "_"
     };
+    #ifndef TREE_RESULT_COLORS
     static const std::string COLORS[] = {
         "red",
         "green",
@@ -129,12 +200,13 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         "brown",
         "orange"
     };
+    #endif
 
     static const std::string REROLL_TYPE[] = {
-        "0,0",
-        "1,0",
-        "0,2",
-        "1,2",
+        "N,N",
+        "Y,N",
+        "N,Y",
+        "Y,Y",
     };
 
     static const std::string DICE_RESULT[] = {
@@ -148,7 +220,12 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         if (siblingIndex == maxSiblings) {
            std::string nodeName = "ellipsis_" + std::to_string(depth) + "_" + std::to_string(reinterpret_cast<uintptr_t>(node));
             Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
+            #ifdef TREE_RESULT_COLORS
+            agsafeset(currentNode, const_cast<char*>("fillcolor"), const_cast<char*>(generateColorGradient(0.5).c_str()), const_cast<char*>(""));
+            agsafeset(currentNode, const_cast<char*>("style"), const_cast<char*>("filled"), const_cast<char*>(""));
+            #else
             agsafeset(currentNode, const_cast<char*>("color"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
+            #endif
             agset(currentNode, const_cast<char*>("label"), const_cast<char*>("..."));
             agedge(graph, parentAgNode, currentNode, nullptr, 1);
         }
@@ -167,23 +244,124 @@ void printGraphvizNodeTree(Node* node, Agraph_t* graph, Agnode_t* parentAgNode, 
         }
     }
 
-    std::string roundIndicator = depth < 5 ? "1st" : "2nd";
-    
+    Node::NodeType nodeType = node->getType();
     std::string nodeName;
-    if (node->getType() == Node::DICE_NODE || node->getType() == Node::OUTCOME_NODE) {
-        nodeName = std::to_string(node->getNodeIndexDepth()) + "_" + roundIndicator + "_" + TYPE_STRINGS[node->getType()] + "_" + DICE_RESULT[node->getDiceSum() - 2];
-    } else if (node->getType() == Node::REROLL_CHOICE_NODE) {
-        nodeName = std::to_string(node->getNodeIndexDepth()) + "_" + roundIndicator + "_" + TYPE_STRINGS[node->getType()] + "_" + REROLL_TYPE[node->getRerollDecision()];
-    } else if (node->getType() == Node::SCORE_ROOT_NODE || node->getType() == Node::ROOT_NODE) {
-        std::string scoreOnesString = node->getScoreOnes() >= 0 ? std::to_string(node->getScoreOnes()) : " ";
-        std::string scoreTwosString = node->getScoreTwos() >= 0 ? std::to_string(node->getScoreTwos()) : " ";
-        nodeName = std::to_string(node->getNodeIndexDepth()) + "_" + roundIndicator + "_" + TYPE_STRINGS[node->getType()] + "_[" + scoreOnesString + "][" + scoreTwosString + "]";
+    double nodeColor = 0;
+
+    if (depth < 5) {
+        std::string roundIndicator = "1st";
+        switch(nodeType) {
+            case Node::ROOT_NODE: {
+                std::string scoreOnesString = node->getScoreOnes() >= 0 ? std::to_string(node->getScoreOnes()) : " ";
+                std::string scoreTwosString = node->getScoreTwos() >= 0 ? std::to_string(node->getScoreTwos()) : " ";
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " [" + scoreOnesString + "][" + scoreTwosString + "]"
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*root_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = root_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            }
+            break;
+            case Node::DICE_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + DICE_RESULT[node->getDiceSum() - 2]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*dice_1_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = dice_1_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::REROLL_CHOICE_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + REROLL_TYPE[node->getRerollDecision()]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*rr_choice_1_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = rr_choice_1_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::OUTCOME_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + DICE_RESULT[node->getDiceSum() - 2]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*outcome_1_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = outcome_1_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::SCORE_ROOT_NODE: {
+                std::string scoreOnesString = node->getScoreOnes() >= 0 ? std::to_string(node->getScoreOnes()) : " ";
+                std::string scoreTwosString = node->getScoreTwos() >= 0 ? std::to_string(node->getScoreTwos()) : " ";
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " [" + scoreOnesString + "][" + scoreTwosString + "]"
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*score_1_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = score_1_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            }
+            break;
+            default:
+                std::cout << "Invalid node type!";
+            break;
+        }
     } else {
-        nodeName = std::to_string(node->getNodeIndexDepth()) + "_" + roundIndicator + "_" + TYPE_STRINGS[node->getType()];
+        std::string roundIndicator = "2nd";
+        switch(nodeType) {
+            case Node::DICE_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + DICE_RESULT[node->getDiceSum() - 2]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*dice_2_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = dice_2_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::REROLL_CHOICE_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + REROLL_TYPE[node->getRerollDecision()]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*rr_choice_2_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = rr_choice_2_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::OUTCOME_NODE:
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " " + DICE_RESULT[node->getDiceSum() - 2]
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*outcome_2_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = outcome_2_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            break;
+            case Node::SCORE_ROOT_NODE: {
+                std::string scoreOnesString = node->getScoreOnes() >= 0 ? std::to_string(node->getScoreOnes()) : " ";
+                std::string scoreTwosString = node->getScoreTwos() >= 0 ? std::to_string(node->getScoreTwos()) : " ";
+                nodeName = std::to_string(depth) + "." + std::to_string(node->getNodeIndexDepth()) + " " + TYPE_STRINGS[nodeType] + " [" + scoreOnesString + "][" + scoreTwosString + "]"
+                #ifdef TREE_RESULT_COLORS
+                + " wr=" + std::to_string((int)(100*score_2_color[node->getNodeIndexDepth()])) + "%";
+                nodeColor = score_2_color[node->getNodeIndexDepth()];
+                #else
+                ;
+                #endif
+            }
+            break;
+            default:
+                std::cout << "Invalid node type!";
+            break;
+        }
     }
 
+
     Agnode_t* currentNode = agnode(graph, const_cast<char*>(nodeName.c_str()), 1);
+    #ifdef TREE_RESULT_COLORS
+    agsafeset(currentNode, const_cast<char*>("fillcolor"), const_cast<char*>(generateColorGradient(nodeColor).c_str()), const_cast<char*>(""));
+    agsafeset(currentNode, const_cast<char*>("style"), const_cast<char*>("filled"), const_cast<char*>(""));
+    #else
     agsafeset(currentNode, const_cast<char*>("color"), const_cast<char*>(COLORS[node->getType()].c_str()), const_cast<char*>(""));
+    #endif
 
     if (parentAgNode) 
     {
@@ -228,7 +406,7 @@ void printTreeAsGraph(const std::vector<Node*>& rootNodes, const std::string& ou
     gvLayout(gvc, graph, "dot"); // Use "dot" or "neato", more options: https://graphviz.org/docs/layouts/
 
     // Save to 'graphs' folder:
-    std::string outputFolderName = "";
+    std::string outputFolderName = "svg/";
     std::string outputFilenameIncludingFolder = outputFolderName + outputFilename;
     gvRenderFilename(gvc, graph, const_cast<char*>(outputFiletype.c_str()), const_cast<char*>(outputFilenameIncludingFolder.c_str()));
     gvFreeLayout(gvc, graph);
@@ -480,8 +658,8 @@ void AssignOutcomesForRerolls(Node* node, std::vector<Node*>* outcomeNodes)
 }
 
 
-std::vector<float> strVecToFpVec(const std::vector<std::string>& stringVec) {
-    std::vector<float> floatVec;
+std::vector<double> strVecToFpVec(const std::vector<std::string>& stringVec) {
+    std::vector<double> floatVec;
     
     for (const auto& str : stringVec) {
         if (str.empty()) {
@@ -489,7 +667,7 @@ std::vector<float> strVecToFpVec(const std::vector<std::string>& stringVec) {
         }
         
         std::istringstream iss(str);
-        float value;
+        double value;
         
         if (iss >> value) {
             floatVec.push_back(value);
@@ -506,19 +684,39 @@ std::vector<float> strVecToFpVec(const std::vector<std::string>& stringVec) {
 int main() {
     srand(static_cast<unsigned>(time(NULL)));
 
+    #ifdef TREE_RESULT_COLORS
+    rapidcsv::Document doc("csv/winning_from_" + std::to_string(TREE_RESULT_COLORS) + ".csv");
+
+    root_color = strVecToFpVec(doc.GetColumn<std::string>("Root"));
+    dice_1_color = strVecToFpVec(doc.GetColumn<std::string>("Dice 1"));
+    rr_choice_1_color = strVecToFpVec(doc.GetColumn<std::string>("RR choice 1"));
+    outcome_1_color = strVecToFpVec(doc.GetColumn<std::string>("Outcome 1"));
+    score_1_color = strVecToFpVec(doc.GetColumn<std::string>("Score 1"));
+    dice_2_color = strVecToFpVec(doc.GetColumn<std::string>("Dice 2"));
+    rr_choice_2_color = strVecToFpVec(doc.GetColumn<std::string>("RR choice 2"));
+    outcome_2_color = strVecToFpVec(doc.GetColumn<std::string>("Outcome 2"));
+    score_2_color = strVecToFpVec(doc.GetColumn<std::string>("Score 2"));
+    #endif
+
     std::cout << "Using all optimizations!\n";
 
     // Make the root node (start of round 1)
     std::vector<Node*> rootNodes(1);
 
     // Generate tree of two rounds (each round has 4 levels of nodes)
+    int rni = 0;
     for (auto& rootNode : rootNodes) {
         rootNode = new Node(Node::ROOT_NODE);
         generateNodeTree(rootNode, NR_OF_ROUNDS*4 );
+        rootNode->setNodeIndexDepth(rni);
+        rni++;
     }
-    
+
     // Save as tree.svg (picture which you can open with your internet browser)
     std::string outputFilename = "tree";
+    #ifdef TREE_RESULT_COLORS
+    outputFilename += "_win_" + std::to_string(TREE_RESULT_COLORS);
+    #endif 
     std::string outputFiletype = "svg"; //you can also change this to png
     outputFilename += "." + outputFiletype;
 
@@ -550,9 +748,6 @@ int main() {
         Node* currentNode = firstNode;
         int nrOfChildren = currentNode->getChildrenCount();
         int nodeDepth = 0;
-        int scoreOnes = -1;
-        int scoreTwos = -1;
-
         //std::cout << "game " << sim << ": ";
 
         //as long as current node has children, it is not the last
@@ -571,30 +766,17 @@ int main() {
                 nextChildIndex = rand() % currentNode->getChildrenCount();
             }
 
-            if (currentNode->getType() == Node::OUTCOME_NODE) {
-                if (nrOfChildren == 2) { //if this happens at the first turn
-                    if (nextChildIndex == 0) { //if we want to score in ones
-                        scoreOnes = 1 * ((currentNode->firstDice == 1) + (currentNode->secondDice == 1));
-                    } else { //if we want to score in twos
-                        scoreTwos = 2 * ((currentNode->firstDice == 2) + (currentNode->secondDice == 2));
-                    }
-                } else { //if this happens in the second turn
-                    if (scoreOnes == -1) { //if ones is not filled in, then we must score in ones
-                        scoreOnes = 1 * ((currentNode->firstDice == 1) + (currentNode->secondDice == 1));
-                    } else { //if ones is filled in, it means twos is not filled in, so we must score in twos
-                        scoreTwos = 2 * ((currentNode->firstDice == 2) + (currentNode->secondDice == 2));
-                    }
-                }
-            }
-            currentNode = currentNode = (*(currentNode->getChildren()))[nextChildIndex];
-
             gameSimulations[sim * 9 + nodeDepth] = currentNode->getNodeIndexDepth();
+
             //std::cout << gameSimulations[sim][nodeDepth] << ", ";
             //how many children has this node?
             nrOfChildren = currentNode->getChildrenCount();
-            nodeDepth++;
+            if (nrOfChildren > 0) {
+                currentNode = currentNode = (*(currentNode->getChildren()))[nextChildIndex];
+                nodeDepth++;
+            }
         }
-        gameScores[sim] = scoreOnes + scoreTwos;
+        gameScores[sim] = currentNode->getScoreOnes() + currentNode->getScoreTwos();
         //std::cout << ": " << gameScores[sim] << "\n";
     }
 
@@ -602,38 +784,95 @@ int main() {
 
     for (int winningScore = 0; winningScore <= 6; winningScore++) {
 
-        csvfile csv("winning_from_" + std::to_string(winningScore) + ".csv");
-        csv << "Index" << "RR choice 1" << "Score 1" << "RR choice 2" << endrow;
+        csvfile csv("csv/winning_from_" + std::to_string(winningScore) + ".csv");
+        csv << "Index" << "Root" << "Dice 1" << "RR choice 1" << "Outcome 1" << "Score 1" << "Dice 2" << "RR choice 2" << "Outcome 2" << "Score 2" << endrow;
 
-        int wining_rerollchoice_1[6] = {0};
-        int winning_score_1[6] = {0};
-        int wining_rerollchoice_2[36] = {0};
+        unsigned long winning_root[1] = {0};
+        unsigned long winning_dice_1[3] = {0};
+        unsigned long winning_rerollchoice_1[6] = {0};
+        unsigned long winning_outcome_1[3] = {0};
+        unsigned long winning_score_1[6] = {0};
+        unsigned long winning_dice_2[18] = {0};
+        unsigned long winning_rerollchoice_2[36] = {0};
+        unsigned long winning_outcome_2[18] = {0};
+        unsigned long winning_score_2[9] = {0};
         
-        int total_rerollchoice_1[6] = {0};
-        int total_score_1[6] = {0};
-        int total_rerollchoice_2[36] = {0};
+        unsigned long total_root[1] = {0};
+        unsigned long total_dice_1[3] = {0};
+        unsigned long total_rerollchoice_1[6] = {0};
+        unsigned long total_outcome_1[3] = {0};
+        unsigned long total_score_1[6] = {0};
+        unsigned long total_dice_2[18] = {0};
+        unsigned long total_rerollchoice_2[36] = {0};
+        unsigned long total_outcome_2[18] = {0};
+        unsigned long total_score_2[9] = {0};
 
         for (unsigned long sim = 0; sim < simulationTimes; sim++) {
             if (gameScores[sim] > winningScore) {
-                wining_rerollchoice_1[gameSimulations[sim * 9 + 1]]++;
-                winning_score_1[gameSimulations[sim * 9 + 3]]++;
-                wining_rerollchoice_2[gameSimulations[sim * 9 + 5]]++;
+                winning_root[gameSimulations[sim * 9 + 0]]++;
+                winning_dice_1[gameSimulations[sim * 9 + 1]]++;
+                winning_rerollchoice_1[gameSimulations[sim * 9 + 2]]++;
+                winning_outcome_1[gameSimulations[sim * 9 + 3]]++;
+                winning_score_1[gameSimulations[sim * 9 + 4]]++;
+                winning_dice_2[gameSimulations[sim * 9 + 5]]++;
+                winning_rerollchoice_2[gameSimulations[sim * 9 + 6]]++;
+                winning_outcome_2[gameSimulations[sim * 9 + 7]]++;
+                winning_score_2[gameSimulations[sim * 9 + 8]]++;
             } 
-            total_rerollchoice_1[gameSimulations[sim * 9 + 1]]++;
-            total_score_1[gameSimulations[sim * 9 + 3]]++;
-            total_rerollchoice_2[gameSimulations[sim * 9 + 5]]++;
+            total_root[gameSimulations[sim * 9 + 0]]++;
+            total_dice_1[gameSimulations[sim * 9 + 1]]++;
+            total_rerollchoice_1[gameSimulations[sim * 9 + 2]]++;
+            total_outcome_1[gameSimulations[sim * 9 + 3]]++;
+            total_score_1[gameSimulations[sim * 9 + 4]]++;
+            total_dice_2[gameSimulations[sim * 9 + 5]]++;
+            total_rerollchoice_2[gameSimulations[sim * 9 + 6]]++;
+            total_outcome_2[gameSimulations[sim * 9 + 7]]++;
+            total_score_2[gameSimulations[sim * 9 + 8]]++;
         }
 
         for (int i = 0; i < 36; i++) {
             csv << i;
+            if (i < 1) {
+                csv << (double)(winning_root[i]) / (double)(total_root[i]);
+            } else {
+                csv << "";
+            }
+            if (i < 3) {
+                csv << (double)(winning_dice_1[i]) / (double)(total_dice_1[i]);
+            } else {
+                csv << "";
+            }
             if (i < 6) {
-                csv << (double)(wining_rerollchoice_1[i]) / (double)(total_rerollchoice_1[i]);
+                csv << (double)(winning_rerollchoice_1[i]) / (double)(total_rerollchoice_1[i]);
+            } else {
+                csv << "";
+            }
+            if (i < 3) {
+                csv << (double)(winning_outcome_1[i]) / (double)(total_outcome_1[i]);
+            } else {
+                csv << "";
+            }
+            if (i < 6) {
                 csv << (double)(winning_score_1[i]) / (double)(total_score_1[i]);
             } else {
                 csv << "";
+            }
+            if (i < 18) {
+                csv << (double)(winning_dice_2[i]) / (double)(total_dice_2[i]);
+            } else {
                 csv << "";
             }
-            csv << (double)(wining_rerollchoice_2[i]) / (double)(total_rerollchoice_2[i]);
+            csv << (double)(winning_rerollchoice_2[i]) / (double)(total_rerollchoice_2[i]);
+            if (i < 18) {
+                csv << (double)(winning_outcome_2[i]) / (double)(total_outcome_2[i]);
+            } else {
+                csv << "";
+            }
+            if (i < 9) {
+                csv << (double)(winning_score_2[i]) / (double)(total_score_2[i]);
+            } else {
+                csv << "";
+            }
             csv << endrow;
         }
     }
@@ -678,11 +917,11 @@ int main() {
 
     std::cout << "Reading CSV file... \n";
 
-    rapidcsv::Document doc("winning_from_" + std::to_string(scoreToWinFrom) + ".csv");
+    rapidcsv::Document doc("csv/winning_from_" + std::to_string(scoreToWinFrom) + ".csv");
 
-    std::vector<float> rr_choice_1 = strVecToFpVec(doc.GetColumn<std::string>("RR choice 1"));
-    std::vector<float> score_1 = strVecToFpVec(doc.GetColumn<std::string>("Score 1"));
-    std::vector<float> rr_choice_2 = strVecToFpVec(doc.GetColumn<std::string>("RR choice 2"));
+    std::vector<double> rr_choice_1 = strVecToFpVec(doc.GetColumn<std::string>("RR choice 1"));
+    std::vector<double> score_1 = strVecToFpVec(doc.GetColumn<std::string>("Score 1"));
+    std::vector<double> rr_choice_2 = strVecToFpVec(doc.GetColumn<std::string>("RR choice 2"));
 
     std::cout << "Done.\n";
     
@@ -711,47 +950,47 @@ int main() {
 
     bool oneistwo = false;
 
-    while (invalid_input) {
+        while (invalid_input) {
         std::cout << "Choose a reflip option. You can choose between:\n";
         if (currentNode->getChildrenCount() == 3) {
-            std::cout << "(0,0) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,0) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,1) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,N) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,N) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,Y) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
         } else {
-            std::cout << "(0,0) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,0) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
-            std::cout << "(0,1) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,1) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[3]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,N) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,N) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,Y) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,Y) with win rate " << rr_choice_1[(*(currentNode->getChildren()))[3]->getNodeIndexDepth()] << "\n";
         }
-        std::cout << "0 means keep, 1 means flip again. Please enter your answer in the format X,X \n";
+        std::cout << "N means keep, Y means flip again. Please enter your answer in the format X,X \n";
         std::string rethrow_choice_string;
         std::cin >> rethrow_choice_string;
 
         if (currentNode->getChildrenCount() == 3) {
-            if (rethrow_choice_string == "0,0") {
+            if (rethrow_choice_string == "N,N" || rethrow_choice_string == "n,n") {
                 rethrow_choice = Node::REROLL_TYPE::NO_REROLLS;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,0" || rethrow_choice_string == "0,1") {
+            } else if (rethrow_choice_string == "Y,N" || rethrow_choice_string == "N,Y" || rethrow_choice_string == "y,n" || rethrow_choice_string == "n,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE;
                 oneistwo = true;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,1") {
+            } else if (rethrow_choice_string == "Y,Y" || rethrow_choice_string == "y,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_BOTH;
                 invalid_input = false;
             } else {
                 std::cout << "Invalid!\n";
             }
         } else {
-            if (rethrow_choice_string == "0,0") {
+            if (rethrow_choice_string == "N,N" || rethrow_choice_string == "n,n") {
                 rethrow_choice = Node::REROLL_TYPE::NO_REROLLS;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,0") {
-                rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO;
-                invalid_input = false;
-            } else if (rethrow_choice_string == "0,1") {
+            } else if (rethrow_choice_string == "Y,N" || rethrow_choice_string == "y,n") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,1") {
+            } else if (rethrow_choice_string == "N,Y" || rethrow_choice_string == "n,y") {
+                rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO;
+                invalid_input = false;
+            } else if (rethrow_choice_string == "Y,Y" || rethrow_choice_string == "y,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_BOTH;
                 invalid_input = false;
             } else {
@@ -862,44 +1101,44 @@ int main() {
     while (invalid_input) {
         std::cout << "Choose a reflip option. You can choose between:\n";
         if (currentNode->getChildrenCount() == 3) {
-            std::cout << "(0,0) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,0) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,1) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,N) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,N) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,Y) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
         } else {
-            std::cout << "(0,0) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,0) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
-            std::cout << "(0,1) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
-            std::cout << "(1,1) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[3]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,N) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[0]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,N) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[1]->getNodeIndexDepth()] << "\n";
+            std::cout << "(N,Y) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[2]->getNodeIndexDepth()] << "\n";
+            std::cout << "(Y,Y) with win rate " << rr_choice_2[(*(currentNode->getChildren()))[3]->getNodeIndexDepth()] << "\n";
         }
-        std::cout << "0 means keep, 1 means flip again. Please enter your answer in the format X,X \n";
+        std::cout << "N means keep, Y means flip again. Please enter your answer in the format X,X \n";
         std::string rethrow_choice_string;
         std::cin >> rethrow_choice_string;
 
         if (currentNode->getChildrenCount() == 3) {
-            if (rethrow_choice_string == "0,0") {
+            if (rethrow_choice_string == "N,N" || rethrow_choice_string == "n,n") {
                 rethrow_choice = Node::REROLL_TYPE::NO_REROLLS;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,0" || rethrow_choice_string == "0,1") {
+            } else if (rethrow_choice_string == "Y,N" || rethrow_choice_string == "N,Y" || rethrow_choice_string == "y,n" || rethrow_choice_string == "n,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE;
                 oneistwo = true;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,1") {
+            } else if (rethrow_choice_string == "Y,Y" || rethrow_choice_string == "y,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_BOTH;
                 invalid_input = false;
             } else {
                 std::cout << "Invalid!\n";
             }
         } else {
-            if (rethrow_choice_string == "0,0") {
+            if (rethrow_choice_string == "N,N" || rethrow_choice_string == "n,n") {
                 rethrow_choice = Node::REROLL_TYPE::NO_REROLLS;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,0") {
+            } else if (rethrow_choice_string == "Y,N" || rethrow_choice_string == "y,n") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_ONE;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "0,1") {
+            } else if (rethrow_choice_string == "N,Y" || rethrow_choice_string == "n,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_SINGLE_DICE_TWO;
                 invalid_input = false;
-            } else if (rethrow_choice_string == "1,1") {
+            } else if (rethrow_choice_string == "Y,Y" || rethrow_choice_string == "y,y") {
                 rethrow_choice = Node::REROLL_TYPE::REROLL_BOTH;
                 invalid_input = false;
             } else {
